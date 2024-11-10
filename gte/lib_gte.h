@@ -1,16 +1,17 @@
 /*
 *
-*	Sony PlayStation
+*	Sony PlayStation (1994)
 *
 *	Geometry Transformation Engine
 *
-*	Sony Computer Entertainment,Tokyo,Japan.
 *
-*	CREDIT: 
-*
-*       Emulator: Copyright 2003-2013 smf
+*	CREDIT:
 * 
-*		Dithering: https://github.com/grumpycoders/pcsx-redux/blob/main/src/gpu/soft/soft.cc
+*		https://github.com/SonofUgly/PCSX-Reloaded
+*
+*		https://github.com/Gh0stBlade/libValkyrie
+* 
+*		https://github.com/OpenDriver2/PsyCross
 *
 */
 
@@ -20,23 +21,16 @@
 
 #include <memory>
 
-typedef class Sony_PlayStation_Library_GTE SonyGte;
-
-/*
-	Sony PlayStation Geometry Transformation Engine
-*/
-extern std::unique_ptr<SonyGte> GTE;
-
 
 #pragma pack(push, 1)
 
-#include "LIBGTE.H"
+#include "psyq/libgte.h"
 
-#include "LIBGPU.H"
+#include "psyq/libgpu.h"
 
-#include "LIBGS.H"
+#include "psyq/libgs.h"
 
-#include "PGXP.H"
+#include "half_float.h"
 
 
 struct MATRIX2
@@ -73,6 +67,28 @@ struct CVECTOR2
 };
 
 
+struct DVECTORF
+{
+	half vx{}, vy{};
+	uint16_t pgxp_index{};
+};
+
+
+struct PGXPVector3D
+{
+	float px{}, py{}, pz{};
+	half x{}, y{}, z{};
+};
+
+
+struct PGXPVData
+{
+	uint32_t lookup{};
+	float px{}, py{}, pz{};
+	float scr_h{}, ofx{}, ofy{};
+};
+
+
 union PSX_PAIR
 {
     struct { uint8_t l, h, h2, h3; } b;
@@ -86,7 +102,10 @@ union PSX_PAIR
 #pragma pack(pop)
 
 
-class Sony_PlayStation_Library_GTE
+#define PGXP_LOOKUP_VALUE(x, y) (*(uint16_t*)&(x) | (*(uint16_t*)&(y) << 16))
+
+
+class Sony_PlayStation_GTE
 {
 private:
 
@@ -173,7 +192,7 @@ private:
     PGXPVector3D g_FP_SXYZ0;
     PGXPVector3D g_FP_SXYZ1;
     PGXPVector3D g_FP_SXYZ2;
-    PGXPVData g_pgxpCache[1 << sizeof(uint16_t) * 8];
+	std::vector<PGXPVData> g_pgxpCache;
     uint16_t g_pgxpVertexIndex;
     int g_pgxpTransformed;
     float g_pgxpZOffset;
@@ -233,7 +252,7 @@ public:
     /*
         Construction
     */
-    explicit Sony_PlayStation_Library_GTE(void) :
+    explicit Sony_PlayStation_GTE(void) :
         CP0(),
         CP2D(),
         CP2C(),
@@ -254,26 +273,36 @@ public:
     {
         stack.resize(20);
         currentMatrix = std::make_shared<MATRIX>(stack[matrixLevel]);
+		g_pgxpCache.resize(65536);
         InitGeom();
     }
-    virtual ~Sony_PlayStation_Library_GTE(void)
+    virtual ~Sony_PlayStation_GTE(void)
     {
         std::memset(&CP0, 0, sizeof(CP0));
         std::memset(&CP2D, 0, sizeof(CP2D));
         std::memset(&CP2C, 0, sizeof(CP2C));
         currentMatrix.reset();
         stack.clear();
+		g_pgxpCache.clear();
     }
+
+	/*
+		Half-precision floating-point from signed 16-bit integer
+	*/
+	float ToFloat(const short x)
+	{
+		half h = x;
+		return h;
+	}
+
+	/*
+		Custom
+	*/
+	void SetIdentity(MATRIX* m);
 
     /*
-        Get MATRIX2
+        PSYQ SDK
     */
-    MATRIX2 GetMatrix2(void) const
-    {
-        return CP2C.n.Rotation;
-    }
-
-
     void InitGeom(void);
 
     //void EigenMatrix(MATRIX* m, MATRIX* t);
@@ -419,11 +448,5 @@ public:
     //int csqrt(int a);
     //int catan(int a);
     long ratan2(long y, long x);
-
-    // Custom
-    void SetIdentity(MATRIX* m);
-
-    // Resident Evil 2
-    MATRIX Set_view(VECTOR2 Eye, VECTOR2 At);
 
 };
