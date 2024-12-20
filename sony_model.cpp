@@ -743,6 +743,8 @@ std::uint16_t Sony_PlayStation_Model::GetColorMode(std::uint16_t Page) const
 	case 3:
 		return 24;
 	}
+
+	return 0;
 }
 
 
@@ -756,14 +758,16 @@ Sony_PlayStation_Transparency_Rate Sony_PlayStation_Model::GetTransparencyRate(s
 	switch (Texture.SemiTrans)
 	{
 	case 0:
-		return Sony_PlayStation_Transparency_Rate::FiftyFifty;
+		return Sony_PlayStation_Transparency_Rate::Half;
 	case 1:
-		return Sony_PlayStation_Transparency_Rate::FullPlus;
+		return Sony_PlayStation_Transparency_Rate::Full;
 	case 2:
-		return Sony_PlayStation_Transparency_Rate::FullMinus;
+		return Sony_PlayStation_Transparency_Rate::Inverse;
 	case 3:
-		return Sony_PlayStation_Transparency_Rate::FullQuarter;
+		return Sony_PlayStation_Transparency_Rate::Quarter;
 	}
+
+	return Sony_PlayStation_Transparency_Rate::Half;
 }
 
 

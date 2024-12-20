@@ -2479,7 +2479,7 @@ void Sony_PlayStation_GTE::InvSquareRoot(long a, long* b, long* c)
 void Sony_PlayStation_GTE::SetFogFar(long a, long h)
 {
 	assert(h != 0);
-	assert((h != -1) && (a * -64 != -0x80000000));
+	assert((h != -1) && (a * -64 != -0x8000));
 
 	SetDQA((a * -64) / h);
 	SetDQB(0x1400000);

@@ -25,29 +25,33 @@ DWORD Sony_PlayStation_Texture::TransparentColor = RGB(0xFF, 0, 0xFF);
 /*
 	Print texture information
 */
-void Sony_PlayStation_Texture::Print(void)
+String Sony_PlayStation_Texture::Print(void)
 {
+	String Output = Str->FormatCStyle("PlayStation Texture: \n");
+
 	if (!b_Open)
 	{
 		Str->Message("PlayStation Texture: Error, texture is not open");
-		return;
+		return Output;
 	}
 
-	std::cout << "PlayStation Texture: " << std::endl;
-	std::cout << "\tID: " << Header.ID << std::endl;
-	std::cout << "\tVersion: " << Header.Version << std::endl;
-	std::cout << "\tMode: " << Header.Mode << " (" << GetDepth() << "bpp)" << std::endl;
-	std::cout << "\tCF: " << Header.ClutFlag << std::endl;
-	std::cout << "\tCLUT X: " << Clut.X << std::endl;
-	std::cout << "\tCLUT Y: " << Clut.Y << std::endl;
-	std::cout << "\tCLUT nColor: " << Clut.nColor << std::endl;
-	std::cout << "\tCLUT nPalette: " << Clut.nPalette << std::endl;
-	std::cout << "\tData X: " << Data.X << std::endl;
-	std::cout << "\tData Y: " << Data.Y << std::endl;
-	std::cout << "\tWidth: " << GetWidth() << std::endl;
-	std::cout << "\tHeight: " << GetHeight() << std::endl;
-	std::cout << "\tPixels: 0x" << std::hex << Pixels.size() << " bytes" << std::dec << std::endl;
+	Output += Str->FormatCStyle("\tID: %d\n", Header.ID);
+	Output += Str->FormatCStyle("\tVersion: %d\n", Header.Version);
+	Output += Str->FormatCStyle("\tMode: %d (%dbpp)\n", Header.Mode, GetDepth());
+	Output += Str->FormatCStyle("\tCF: %d\n", Header.ClutFlag);
+	Output += Str->FormatCStyle("\tCLUT X: %d\n", Clut.X);
+	Output += Str->FormatCStyle("\tCLUT Y: %d\n", Clut.Y);
+	Output += Str->FormatCStyle("\tCLUT nColor: %d\n", Clut.nColor);
+	Output += Str->FormatCStyle("\tCLUT nPalette: %d\n", Clut.nPalette);
+	Output += Str->FormatCStyle("\tData X: %d\n", Data.X);
+	Output += Str->FormatCStyle("\tData Y: %d\n", Data.Y);
+	Output += Str->FormatCStyle("\tWidth: %d\n", GetWidth());
+	Output += Str->FormatCStyle("\tHeight: %d\n", GetHeight());
+	Output += Str->FormatCStyle("\tPixels: 0x%X bytes\n", Pixels.size());
 
+	std::cout << Output << std::endl;
+
+	return Output;
 }
 
 
@@ -177,7 +181,12 @@ std::uintmax_t Sony_PlayStation_Texture::Open(StdFile& File, std::uintmax_t _Ptr
 		return _Ptr;
 	}
 
-	if ((Header.ID != 0x10) && (Header.Version != 0) && (Header.Mode != 0) && (Header.Mode != 1) && (Header.Mode != 2) && (Header.Mode != 3))
+	if ((Header.ID != 0x10) ||
+		(Header.Version != 0) ||
+		(Header.Reserved0 != 0) ||
+		((Header.Mode != 0) && (Header.Mode != 1) && (Header.Mode != 2) && (Header.Mode != 3)) ||
+		((Header.ClutFlag != 0) && (Header.ClutFlag != 1)) ||
+		(Header.Reserved1 != 0))
 	{
 		Str->Message("PlayStation Texture: Error, invalid header at 0x%llX in %s", _Ptr, File.GetPath().filename().string().c_str());
 		Close();
@@ -302,6 +311,127 @@ std::uintmax_t Sony_PlayStation_Texture::Save(StdFile& File, std::uintmax_t _Ptr
 	File.Write(_Ptr, Pixels.data(), Pixels.size());
 
 	return _Ptr + Pixels.size();
+}
+
+
+/*
+	Search
+*/
+std::vector<std::pair<std::uintmax_t, std::uintmax_t>> Sony_PlayStation_Texture::Search(StdFile& File, std::uintmax_t _Ptr)
+{
+	std::vector<std::pair<std::uintmax_t, std::uintmax_t>> SearchResults;
+
+	if (!File.IsOpen())
+	{
+		if (!File.Open(File.GetPath(), FileAccessMode::Read, true, false))
+		{
+			Str->Message("PlayStation Texture: Error, could not open at 0x%llX in %s", _Ptr, File.GetPath().filename().string().c_str());
+			return SearchResults;
+		}
+	}
+
+	std::uintmax_t FileSize = File.Size();
+
+	std::uintmax_t OldPtr = 0;
+
+	while (_Ptr < FileSize)
+	{
+		Sony_Texture_Header Header;
+		File.Read(_Ptr, &Header, sizeof(Sony_Texture_Header));
+
+		if ((Header.ID == 0x10) &&
+			(Header.Version == 0) &&
+			(Header.Reserved0 == 0) &&
+			((Header.Mode == 0) || (Header.Mode == 1) || (Header.Mode == 2) || (Header.Mode == 3)) &&
+			((Header.ClutFlag == 0) || (Header.ClutFlag == 1)) &&
+			(Header.Reserved1 == 0))
+		{
+			OldPtr = _Ptr;
+
+			_Ptr += sizeof(Sony_Texture_Header);
+
+			if (Header.ClutFlag)
+			{
+				Sony_Texture_Clut Clut;
+				File.Read(_Ptr, &Clut, sizeof(Sony_Texture_Clut));
+
+				if ((Clut.X & 0x0F) || (Clut.X < 0) || (Clut.X > 1024))
+				{
+					_Ptr = ++OldPtr;
+					continue;
+				}
+
+				if ((Clut.Y < 0) || (Clut.Y > 512))
+				{
+					_Ptr = ++OldPtr;
+					continue;
+				}
+
+				_Ptr += sizeof(Sony_Texture_Clut);
+				_Ptr += (Clut.nPalette * (Clut.nColor * sizeof(Sony_Texture_16bpp)));
+			}
+
+			Sony_Texture_Data Data;
+			File.Read(_Ptr, &Data, sizeof(Sony_Texture_Data));
+
+			_Ptr += sizeof(Sony_Texture_Data);
+
+			std::size_t PixelSize = Data.Size;
+			if (PixelSize & sizeof(Sony_Texture_Data)) { PixelSize ^= sizeof(Sony_Texture_Data); }
+
+			_Ptr += PixelSize;
+
+			if ((Data.Width == 0) ||
+				(Data.Height == 0) ||
+				(Data.Width > 1024) ||
+				(Data.Height > 512))
+			{
+				_Ptr = ++OldPtr;
+				continue;
+			}
+
+			std::uint32_t DataSize = 0;
+			switch (Header.Mode)
+			{
+			case 0:
+			case 1:
+			case 2:
+				DataSize = (((Data.Width * Data.Height) * 2));
+				break;
+			case 3:
+				DataSize = (((Data.Width * Data.Height) * 3));
+				break;
+			}
+			if (DataSize != PixelSize)
+			{
+				// std::cout << "DataSize: 0x" << std::hex << DataSize << std::dec << " != PixelSize: 0x" << std::hex << PixelSize << std::dec << std::endl;
+				_Ptr = ++OldPtr;
+				continue;
+			}
+
+			SearchResults.push_back(std::make_pair(OldPtr, (_Ptr - OldPtr)));
+			std::cout << "Found at 0x" << std::hex << OldPtr << std::dec << " with size 0x" << std::hex << (_Ptr - OldPtr) << std::dec << std::endl;
+		}
+		else
+		{
+			_Ptr++;
+		}
+	}
+
+	return SearchResults;
+}
+
+
+/*
+	Search
+*/
+std::vector<std::pair<std::uintmax_t, std::uintmax_t>> Sony_PlayStation_Texture::Search(std::filesystem::path Path, std::uintmax_t _Ptr)
+{
+	StdFile m_File;
+
+	m_File.SetPath(Path);
+
+	return Search(m_File, _Ptr);
 }
 
 

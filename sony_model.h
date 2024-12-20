@@ -93,10 +93,10 @@ enum class Sony_PlayStation_Primitive_Type : int
 
 enum class Sony_PlayStation_Transparency_Rate : int
 {
-	FiftyFifty = 0,						// 50%back + 50%polygon
-	FullPlus = 1,						// 100%back + 100%polygon
-	FullMinus = 2,						// 100%back - 100%polygon
-	FullQuarter = 3						// 100%back + 25%polygon
+	Half = 0,							// 50%back + 50%polygon
+	Full = 1,							// 100%back + 100%polygon
+	Inverse = 2,						// 100%back - 100%polygon
+	Quarter = 3							// 100%back + 25%polygon
 };
 
 

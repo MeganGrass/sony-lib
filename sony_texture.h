@@ -186,7 +186,7 @@ public:
 	/*
 		Print texture information
 	*/
-	void Print(void);
+	String Print(void);
 
 	/*
 		Create
@@ -212,6 +212,18 @@ public:
 		Save
 	*/
 	bool Save(std::filesystem::path Path, std::uintmax_t _Ptr = 0);
+
+	/*
+		Search
+		 - pair: <Position, Size>
+	*/
+	std::vector<std::pair<std::uintmax_t, std::uintmax_t>> Search(StdFile& File, std::uintmax_t _Ptr);
+
+	/*
+		Search
+		 - pair: <Position, Size>
+	*/
+	std::vector<std::pair<std::uintmax_t, std::uintmax_t>> Search(std::filesystem::path Path, std::uintmax_t _Ptr = 0);
 
 	/*
 		Get CLUT amount
@@ -377,6 +389,16 @@ public:
 		Get 24bpp pixel
 	*/
 	[[nodiscard]] Sony_Texture_24bpp Get24bpp(std::size_t X, std::size_t Y) { return *reinterpret_cast<Sony_Texture_24bpp*>(&Pixels.data()[(Y * GetWidth() + X) * sizeof(Sony_Texture_24bpp)]); }
+
+	/*
+		Get clut
+	*/
+	[[nodiscard]] Sony_Texture_Clut& GetClut(void) { return Clut; }
+
+	/*
+		Get palette
+	*/
+	[[nodiscard]] std::vector<std::vector<Sony_Texture_16bpp>>& GetPalette(void) { return Palette; }
 
 	/*
 		Get transparent color
