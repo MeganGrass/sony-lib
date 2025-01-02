@@ -139,10 +139,12 @@ struct BitStream
         code >>= nz - shift;
 
         // ASSERT(table);
+		if (!table) return false;
 
         int32_t idx = table[code];
 
         // ASSERT(idx != 255);
+		if (idx == 255) return false;
 
         const AC_ENTRY& e = MDEC_AC[idx];
         skip(e.length - nz - 1);
@@ -329,6 +331,8 @@ std::uint64_t Sony_PlayStation_Bitstream::mdec_decode(std::uint8_t* data, std::i
     std::int32_t prev[3] = { 0, 0, 0 };
     std::int32_t blocks[6][8 * 8]{}; // Cr, Cb, YTL, YTR, YBL, YBR
 
+	std::int32_t dataSize = width * height * 4;
+
     for (std::int32_t bX = 0; bX < width / 16; bX++)
     {
         for (std::int32_t bY = 0; bY < height / 16; bY++)
@@ -404,6 +408,7 @@ std::uint64_t Sony_PlayStation_Bitstream::mdec_decode(std::uint8_t* data, std::i
                     dc += prev[nz];
                     prev[nz] = dc;
                     //ASSERT(prev[nz] >= -512 && prev[nz] <= 511);
+					if (prev[nz] < -512 || prev[nz] > 511) return 0;
                 }
 
                 block[0] = SCALER(dc * MDEC_QTABLE[0], AAN_EXTRA - 3);
@@ -416,6 +421,7 @@ std::uint64_t Sony_PlayStation_Bitstream::mdec_decode(std::uint8_t* data, std::i
                 {
                     index += skip + 1;
                     //ASSERT(index < 64);
+					if (index >= 64) break;
 
                     block[MDEC_ZSCAN[index]] = SCALER(ac * MDEC_QTABLE[index] * qscale, AAN_EXTRA);
 
@@ -436,6 +442,7 @@ std::uint64_t Sony_PlayStation_Bitstream::mdec_decode(std::uint8_t* data, std::i
             {
                 for (int x = 0; x < 16; x++)
                 {
+					if (ptr + 4 > dst + dataSize) break;
                     *ptr++ = *src++;
                     *ptr++ = *src++;
                     *ptr++ = *src++;

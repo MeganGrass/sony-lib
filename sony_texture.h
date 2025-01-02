@@ -21,6 +21,10 @@
 
 #include <std_image.h>
 
+#ifdef DeletePalette
+#undef DeletePalette
+#endif
+
 
 #pragma pack(push, 1)
 
@@ -226,16 +230,6 @@ public:
 	std::vector<std::pair<std::uintmax_t, std::uintmax_t>> Search(std::filesystem::path Path, std::uintmax_t _Ptr = 0);
 
 	/*
-		Get CLUT amount
-	*/
-	[[nodiscard]] std::uint32_t GetClutSize(void) const { return Clut.nPalette; }
-
-	/*
-		Resize CLUT
-	*/
-	void ResizeClut(std::uint16_t nClut) { Palette.resize(nClut); }
-
-	/*
 		Read palette from file
 	*/
 	std::uintmax_t ReadPalette(StdFile& File, std::uintmax_t _Ptr, std::size_t iClut = 0);
@@ -263,7 +257,7 @@ public:
 	/*
 		Get file size
 	*/
-	[[nodiscard]] std::uintmax_t Size(void) const;
+	[[nodiscard]] std::size_t Size(void) const;
 
 	/*
 		Get depth
@@ -271,44 +265,91 @@ public:
 	[[nodiscard]] std::uint32_t GetDepth(void) const;
 
 	/*
+		Get pixel data
+	*/
+	[[nodiscard]] std::vector<std::uint8_t>& GetPixels(void) { return Pixels; }
+
+	/*
+		Get palette
+	*/
+	[[nodiscard]] std::vector<std::vector<Sony_Texture_16bpp>>& GetPalette(void) { return Palette; }
+
+	/*
+		Get converted palette depth
+		 - does not modify original palette
+		 - convert from 4bpp to 8bpp and vice-versa
+		 - converting from 8bpp to 4bpp will result in loss of color (256 -> 16), first 16 colors are preserved
+	*/
+	[[nodiscard]] std::vector<std::vector<Sony_Texture_16bpp>> GetConvertedPalette(std::uint32_t _Depth);
+
+	/*
+		Add palette
+	*/
+	void AddPalette(void);
+
+	/*
+		Insert palette
+		 - 4/8bpp only
+		 - insert new (blank) palette at specified index
+	*/
+	void InsertPalette(std::size_t iClut);
+
+	/*
+		Delete palette
+		 - 4/8bpp only
+		 - delete palette at specified index
+		 - cannot delete single-only palette (eg, must have at least 1 palette)
+	*/
+	void DeletePalette(std::size_t iClut);
+
+	/*
+		Get/Set transparent color
+	*/
+	[[nodiscard]] DWORD& GetTransparentColor(void) { return TransparentColor; }
+
+	/*
+		Enable or disable Semitransparency Processing (STP Flag) for 4bpp and 8bpp textures
+		When enabled, black pixels in 4bpp and 8bpp textures are replaced with Mask/TransparentColor
+		Enabled by default
+	*/
+	void SetSTP4Bpp(bool b_Enable) noexcept { b_STP4Bpp = b_Enable; }
+
+	/*
+		Enable or disable Semitransparency Processing (STP Flag) for 16bpp textures
+		When enabled, black pixels in 16bpp textures are replaced with Mask/TransparentColor
+		Disabled by default
+	*/
+	void SetSTP16Bpp(bool b_Enable) noexcept { b_STP16Bpp = b_Enable; }
+
+	/*
+		Get clut
+	*/
+	[[nodiscard]] Sony_Texture_Clut& GetClut(void) { return Clut; }
+
+	/*
+		Get CLUT amount
+	*/
+	[[nodiscard]] std::uint32_t GetClutSize(void) const { return Clut.nPalette; }
+
+	/*
 		Get CLUT X coordinate
 	*/
-	[[nodiscard]] std::int16_t GetClutX(void) const { return Clut.X; }
+	[[nodiscard]] std::int16_t& GetClutX(void) { return Clut.X; }
 
 	/*
 		Get CLUT Y coordinate
 	*/
-	[[nodiscard]] std::int16_t GetClutY(void) const { return Clut.Y; }
-
-	/*
-		Set CLUT X coordinate
-	*/
-	void SetClutX(std::int16_t X) noexcept { Clut.X = X; }
-
-	/*
-		Set CLUT Y coordinate
-	*/
-	void SetClutY(std::int16_t Y) noexcept { Clut.Y = Y; }
+	[[nodiscard]] std::int16_t& GetClutY(void) { return Clut.Y; }
 
 	/*
 		Get data X coordinate
 	*/
-	[[nodiscard]] std::int16_t GetDataX(void) const { return Data.X; }
+	[[nodiscard]] std::int16_t& GetDataX(void) { return Data.X; }
 
 	/*
 		Get data Y coordinate
 	*/
-	[[nodiscard]] std::int16_t GetDataY(void) const { return Data.Y; }
-
-	/*
-		Set Data X coordinate
-	*/
-	void SetDataX(std::int16_t X) noexcept { Data.X = X; }
-
-	/*
-		Set Data Y coordinate
-	*/
-	void SetDataY(std::int16_t Y) noexcept { Data.Y = Y; }
+	[[nodiscard]] std::int16_t& GetDataY(void) { return Data.Y; }
 
 	/*
 		Get width
@@ -389,40 +430,6 @@ public:
 		Get 24bpp pixel
 	*/
 	[[nodiscard]] Sony_Texture_24bpp Get24bpp(std::size_t X, std::size_t Y) { return *reinterpret_cast<Sony_Texture_24bpp*>(&Pixels.data()[(Y * GetWidth() + X) * sizeof(Sony_Texture_24bpp)]); }
-
-	/*
-		Get clut
-	*/
-	[[nodiscard]] Sony_Texture_Clut& GetClut(void) { return Clut; }
-
-	/*
-		Get palette
-	*/
-	[[nodiscard]] std::vector<std::vector<Sony_Texture_16bpp>>& GetPalette(void) { return Palette; }
-
-	/*
-		Get transparent color
-	*/
-	[[nodiscard]] DWORD GetTransparentColor(void) const { return TransparentColor; }
-
-	/*
-		Set transparent color
-	*/
-	void SetTransparentColor(DWORD Color) noexcept { TransparentColor = Color; }
-
-	/*
-		Enable or disable Semitransparency Processing (STP Flag) for 4bpp and 8bpp textures
-		When enabled, black pixels in 4bpp and 8bpp textures are replaced with Mask/TransparentColor
-		Enabled by default
-	*/
-	void SetSTP4Bpp(bool b_Enable) noexcept { b_STP4Bpp = b_Enable; }
-
-	/*
-		Enable or disable Semitransparency Processing (STP Flag) for 16bpp textures
-		When enabled, black pixels in 16bpp textures are replaced with Mask/TransparentColor
-		Disabled by default
-	*/
-	void SetSTP16Bpp(bool b_Enable) noexcept { b_STP16Bpp = b_Enable; }
 
 	/*
 		Update Standard Image Palette
