@@ -25,6 +25,8 @@
 #undef DeletePalette
 #endif
 
+#define MAX_TIM_PALETTE	256			// Maximum palette count for Sony PlayStation Texture Image (*TIM) files
+
 
 #pragma pack(push, 1)
 
@@ -126,6 +128,9 @@ private:
 	// Semitransparency Processing Flag (STP) 16bpp
 	bool b_STP16Bpp;
 
+	// Superimposed Transparency
+	bool b_TransparencySuperimposed;
+
 	// Flag
 	bool b_Open;
 
@@ -142,6 +147,7 @@ public:
 		Pixels(),
 		b_STP4Bpp(true),
 		b_STP16Bpp(false),
+		b_TransparencySuperimposed(false),
 		b_Open(false)
 	{
 		Open(Path, _Ptr);
@@ -155,6 +161,7 @@ public:
 		Pixels(),
 		b_STP4Bpp(true),
 		b_STP16Bpp(false),
+		b_TransparencySuperimposed(false),
 		b_Open(false)
 	{
 		Create(_Depth, _Width, _Height, nPalette);
@@ -168,6 +175,7 @@ public:
 		Pixels(),
 		b_STP4Bpp(true),
 		b_STP16Bpp(false),
+		b_TransparencySuperimposed(false),
 		b_Open(false)
 	{
 	}
@@ -186,6 +194,11 @@ public:
 		Check if the texture is open
 	*/
 	bool IsOpen(void) const noexcept { return b_Open; }
+
+	/*
+		Texture information
+	*/
+	String About(void);
 
 	/*
 		Print texture information
@@ -230,26 +243,6 @@ public:
 	std::vector<std::pair<std::uintmax_t, std::uintmax_t>> Search(std::filesystem::path Path, std::uintmax_t _Ptr = 0);
 
 	/*
-		Read palette from file
-	*/
-	std::uintmax_t ReadPalette(StdFile& File, std::uintmax_t _Ptr, std::size_t iClut = 0);
-
-	/*
-		Copy palette from unsigned char vector
-	*/
-	bool CopyPalette(std::vector<std::uint8_t> Source, std::size_t iClut = 0);
-
-	/*
-		Read pixels from file
-	*/
-	std::uintmax_t ReadPixels(StdFile& File, std::uintmax_t _Ptr, std::uint32_t _PixelCount);
-
-	/*
-		Copy pixels from unsigned char vector
-	*/
-	bool CopyPixels(std::vector<std::uint8_t> Source, std::size_t Destination);
-
-	/*
 		Close
 	*/
 	void Close(void);
@@ -265,66 +258,16 @@ public:
 	[[nodiscard]] std::uint32_t GetDepth(void) const;
 
 	/*
-		Get pixel data
+		Get clut flag
+		- false (CLUT not present), true (CLUT present)
 	*/
-	[[nodiscard]] std::vector<std::uint8_t>& GetPixels(void) { return Pixels; }
+	[[nodiscard]] bool GetCF(void) const { return Header.ClutFlag; }
 
 	/*
-		Get palette
+		Set clut flag
+		- false (CLUT not present), true (CLUT present)
 	*/
-	[[nodiscard]] std::vector<std::vector<Sony_Texture_16bpp>>& GetPalette(void) { return Palette; }
-
-	/*
-		Get converted palette depth
-		 - does not modify original palette
-		 - convert from 4bpp to 8bpp and vice-versa
-		 - converting from 8bpp to 4bpp will result in loss of color (256 -> 16), first 16 colors are preserved
-	*/
-	[[nodiscard]] std::vector<std::vector<Sony_Texture_16bpp>> GetConvertedPalette(std::uint32_t _Depth);
-
-	/*
-		Add palette
-	*/
-	void AddPalette(void);
-
-	/*
-		Insert palette
-		 - 4/8bpp only
-		 - insert new (blank) palette at specified index
-	*/
-	void InsertPalette(std::size_t iClut);
-
-	/*
-		Delete palette
-		 - 4/8bpp only
-		 - delete palette at specified index
-		 - cannot delete single-only palette (eg, must have at least 1 palette)
-	*/
-	void DeletePalette(std::size_t iClut);
-
-	/*
-		Get/Set transparent color
-	*/
-	[[nodiscard]] DWORD& GetTransparentColor(void) { return TransparentColor; }
-
-	/*
-		Enable or disable Semitransparency Processing (STP Flag) for 4bpp and 8bpp textures
-		When enabled, black pixels in 4bpp and 8bpp textures are replaced with Mask/TransparentColor
-		Enabled by default
-	*/
-	void SetSTP4Bpp(bool b_Enable) noexcept { b_STP4Bpp = b_Enable; }
-
-	/*
-		Enable or disable Semitransparency Processing (STP Flag) for 16bpp textures
-		When enabled, black pixels in 16bpp textures are replaced with Mask/TransparentColor
-		Disabled by default
-	*/
-	void SetSTP16Bpp(bool b_Enable) noexcept { b_STP16Bpp = b_Enable; }
-
-	/*
-		Get clut
-	*/
-	[[nodiscard]] Sony_Texture_Clut& GetClut(void) { return Clut; }
+	[[nodiscard]] void SetCF(bool ClutFlag) { Header.ClutFlag = ClutFlag; }
 
 	/*
 		Get CLUT amount
@@ -370,6 +313,143 @@ public:
 		Set height
 	*/
 	bool SetHeight(std::uint16_t _Height);
+
+	/*
+		Get pixel data
+	*/
+	[[nodiscard]] std::vector<std::uint8_t>& GetPixels(void) { return Pixels; }
+
+	/*
+		Get palette
+	*/
+	[[nodiscard]] std::vector<std::vector<Sony_Texture_16bpp>>& GetPalette(void) { return Palette; }
+
+	/*
+		Get palette
+		 - palette is not modified
+		 - convert from 4bpp to 8bpp and vice-versa
+		 - converting from 8bpp to 4bpp will result in loss of color (256 -> 16), first 16 colors are preserved
+	*/
+	[[nodiscard]] std::vector<std::vector<Sony_Texture_16bpp>> GetPalette(std::uint32_t _Depth);
+
+	/*
+		Convert unsigned char vector to palette
+		 - palette is not modified
+		 - 256 max palettes read from source
+		 - convert from 4bpp to 8bpp and vice-versa
+		 - converting from 8bpp to 4bpp will result in loss of color (256 -> 16), first 16 colors are preserved
+	*/
+	[[nodiscard]] std::vector<std::vector<Sony_Texture_16bpp>> ConvertToPalette(std::vector<std::uint8_t> Source) const;
+
+	/*
+		Get/Set transparent color
+	*/
+	[[nodiscard]] DWORD& GetTransparentColor(void) { return TransparentColor; }
+
+	/*
+		Enable or disable Semitransparency Processing (STP Flag) for 4bpp and 8bpp textures
+		- when enabled, solid black pixels in 4bpp and 8bpp textures are replaced with Mask/TransparentColor
+		- enabled by default
+	*/
+	bool& STP4Bpp(void) noexcept { return b_STP4Bpp; }
+
+	/*
+		Enable or disable Semitransparency Processing (STP Flag) for 16bpp textures
+		- when enabled, solid black pixels in 16bpp textures are replaced with Mask/TransparentColor
+		- disabled by default
+	*/
+	bool& STP16Bpp(void) noexcept { return b_STP16Bpp; }
+
+	/*
+		Enable or disable Superimposed Transparency
+		- when enabled, "TransparentColor" is always set to palette index (0)
+		- disabled by default
+	*/
+	bool& TransparencySuperimposed(void) noexcept { return b_TransparencySuperimposed; }
+
+	/*
+		Add palette
+	*/
+	void AddPalette(void);
+
+	/*
+		Export all palettes as raw data
+	*/
+	void ExportPalette(std::filesystem::path _Filename);
+
+	/*
+		Insert palette
+		 - insert new (blank) palette at specified index
+	*/
+	void InsertPalette(std::size_t iClut);
+
+	/*
+		Import palette
+		 - single palette is imported to iClut index
+		 - import from either 4bpp or 8bpp
+		 - converting from 8bpp to 4bpp will result in loss of color (256 -> 16), first 16 colors are preserved
+	*/
+	bool ImportPalette(std::vector<Sony_Texture_16bpp> _Palette, std::size_t iClut);
+
+	/*
+		Import palette
+		 - entire palette is completely replaced
+		 - import from either 4bpp or 8bpp
+		 - converting from 8bpp to 4bpp will result in loss of color (256 -> 16), first 16 colors are preserved
+	*/
+	bool ImportPalette(std::vector<std::vector<Sony_Texture_16bpp>> _Palette);
+
+	/*
+		Import palette from unsigned char vector
+		 - entire palette is completely replaced
+	*/
+	bool ImportPalette(std::vector<std::uint8_t> Source);
+
+	/*
+		Import palette from file
+		 - entire palette is completely replaced
+	*/
+	bool ImportPalette(StdFile& File, std::uintmax_t _Ptr);
+
+	/*
+		Import palette from file
+		 - entire palette is completely replaced
+	*/
+	bool ImportPalette(std::filesystem::path Filename, std::uintmax_t _Ptr);
+
+	/*
+		Import palette from file
+		 - single palette is imported to iClut index
+	*/
+	bool ImportMicrosoftPalette(std::filesystem::path Filename, std::size_t iClut);
+
+	/*
+		Export palette from file
+		 - single palette is exported from iClut index
+	*/
+	bool ExportMicrosoftPalette(std::filesystem::path Filename, std::size_t iClut);
+
+	/*
+		Delete palette
+		 - delete palette at specified index
+		 - cannot delete single-only palette (eg, must have at least 1 palette)
+	*/
+	void DeletePalette(std::size_t iClut);
+
+	/*
+		Import pixels from unsigned char vector
+	*/
+	bool ImportPixels(std::vector<std::uint8_t> Source);
+
+	/*
+		Import pixels from unsigned char vector
+	*/
+	bool ImportPixels(std::vector<std::uint8_t> Source, std::size_t Destination);
+
+	/*
+		Import pixels from file
+	*/
+	std::uintmax_t ImportPixels(StdFile& File, std::uintmax_t _Ptr, std::uint32_t _PixelCount);
 
 	/*
 		Get red color from 16bpp pixel/palette entry
