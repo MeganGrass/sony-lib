@@ -7,8 +7,6 @@
 *	TODO: 
 * 
 *		Function to write RGB pixels
-* 
-*		Resize pixels when adjusting width and height
 *
 */
 
@@ -20,6 +18,8 @@
 #include <std_string.h>
 
 #include <std_image.h>
+
+#include <functional>
 
 #ifdef DeletePalette
 #undef DeletePalette
@@ -45,8 +45,8 @@ struct Sony_Texture_Header
 struct Sony_Texture_Clut
 {
 	std::uint32_t Size;				// Size of CLUT Data
-	std::int16_t X;					// X Coordinate of Palette[][] in Frame Buffer
-	std::int16_t Y;					// Y Coordinate of Palette[][] in Frame Buffer
+	std::uint16_t X;				// X Coordinate of Palette[][] in Frame Buffer
+	std::uint16_t Y;				// Y Coordinate of Palette[][] in Frame Buffer
 	std::uint16_t nColor;			// Color Amount in each Palette Table
 	std::uint16_t nPalette;			// Palette Table Amount
 };
@@ -55,8 +55,8 @@ struct Sony_Texture_Clut
 struct Sony_Texture_Data
 {
 	std::uint32_t Size;				// Size of Pixel Data
-	std::int16_t X;					// X Coordinate of Pixel Data in Frame Buffer
-	std::int16_t Y;					// Y Coordinate of Pixel Data in Frame Buffer
+	std::uint16_t X;				// X Coordinate of Pixel Data in Frame Buffer
+	std::uint16_t Y;				// Y Coordinate of Pixel Data in Frame Buffer
 	std::uint16_t Width;			// Texture Width
 	std::uint16_t Height;			// Texture Height
 };
@@ -98,6 +98,40 @@ struct Sony_Texture_24bpp
 };
 
 
+enum class Sony_Texture_Transparency : int
+{
+	None = 0,						// No Options
+	Superblack = (1 << 0),			// Semi/Full Transparency for solid black
+	Superimposed = (1 << 1),		// Semi/Full Transparency for palette index 0
+	External = (1 << 2),			// Semi/Full Transparency for external source
+	Half = (1 << 3),				// Semi-Transparency: 50%back + 50%texture (incompatible with Full, Inverse and Quarter)
+	Full = (1 << 4),				// Semi-Transparency: 100%back + 100%texture (incompatible with Half, Inverse and Quarter)
+	Inverse = (1 << 5),				// Semi-Transparency: 100%back - 100%texture (incompatible with Half, Full and Quarter)
+	Quarter = (1 << 6),				// Semi-Transparency: 100%back + 25%texture (incompatible with Half, Full and Inverse)
+	STP = (1 << 7),					// STP flag determines if Semi-Transparency is used (4bpp, 8bpp and 16bpp only)
+};
+
+static Sony_Texture_Transparency operator | (Sony_Texture_Transparency _Mode0, Sony_Texture_Transparency _Mode1)
+{
+	return static_cast<Sony_Texture_Transparency>(std::to_underlying(_Mode0) | std::to_underlying(_Mode1));
+}
+
+static Sony_Texture_Transparency operator |= (Sony_Texture_Transparency& _Mode0, Sony_Texture_Transparency _Mode1)
+{
+	return _Mode0 = static_cast<Sony_Texture_Transparency>(std::to_underlying(_Mode0) | std::to_underlying(_Mode1));
+}
+
+static Sony_Texture_Transparency operator ^ (Sony_Texture_Transparency _Mode0, Sony_Texture_Transparency _Mode1)
+{
+	return static_cast<Sony_Texture_Transparency>(std::to_underlying(_Mode0) ^ std::to_underlying(_Mode1));
+}
+
+static Sony_Texture_Transparency operator ^= (Sony_Texture_Transparency& _Mode0, Sony_Texture_Transparency _Mode1)
+{
+	return _Mode0 = static_cast<Sony_Texture_Transparency>(std::to_underlying(_Mode0) ^ std::to_underlying(_Mode1));
+}
+
+
 #pragma pack(pop)
 
 
@@ -116,25 +150,49 @@ private:
 	// Palette
 	std::vector<std::vector<Sony_Texture_16bpp>> Palette;
 
-	// ABGR Pixel Data
+	// Pixels
 	std::vector<std::uint8_t> Pixels;
 
-	// Semitransparency Processing Flag (STP) Color
-	static DWORD TransparentColor;
-
-	// Semitransparency Processing Flag (STP) 4bpp/8bpp
-	bool b_STP4Bpp;
-
-	// Semitransparency Processing Flag (STP) 16bpp
-	bool b_STP16Bpp;
+	// Superblack Transparency
+	bool b_TransparencySuperblack;
 
 	// Superimposed Transparency
 	bool b_TransparencySuperimposed;
+
+	// Transparency for STP flag only
+	bool b_TransparencySTP;
+
+	// Semi-Transparency (50%back + 50%texture)
+	bool b_TransparencyHalf;
+
+	// Semi-Transparency (100%back + 100%texture)
+	bool b_TransparencyFull;
+
+	// Semi-Transparency (100%back - 100%texture)
+	bool b_TransparencyInverse;
+
+	// Semi-Transparency (100%back + 25%texture)
+	bool b_TransparencyQuarter;
+
+	// Transparency (external color)
+	bool b_Transparency;
+
+	// Transparency Color (external)
+	static DWORD m_TransparentColor;
+
+	// Transparency Flags
+	Sony_Texture_Transparency m_Transparency;
+
+	// Search Progress
+	float m_SearchProgress;
 
 	// Flag
 	bool b_Open;
 
 public:
+
+	// Standard String
+	Standard_String Str;
 
 	/*
 		Construction
@@ -145,9 +203,16 @@ public:
 		Data{},
 		Palette(),
 		Pixels(),
-		b_STP4Bpp(true),
-		b_STP16Bpp(false),
+		b_TransparencySuperblack(false),
 		b_TransparencySuperimposed(false),
+		b_TransparencySTP(false),
+		b_TransparencyHalf(false),
+		b_TransparencyFull(true),
+		b_TransparencyInverse(false),
+		b_TransparencyQuarter(false),
+		b_Transparency(false),
+		m_Transparency(Sony_Texture_Transparency::None),
+		m_SearchProgress(0.0f),
 		b_Open(false)
 	{
 		Open(Path, _Ptr);
@@ -159,9 +224,16 @@ public:
 		Data{},
 		Palette(),
 		Pixels(),
-		b_STP4Bpp(true),
-		b_STP16Bpp(false),
+		b_TransparencySuperblack(false),
 		b_TransparencySuperimposed(false),
+		b_TransparencySTP(false),
+		b_TransparencyHalf(false),
+		b_TransparencyFull(true),
+		b_TransparencyInverse(false),
+		b_TransparencyQuarter(false),
+		b_Transparency(false),
+		m_Transparency(Sony_Texture_Transparency::None),
+		m_SearchProgress(0.0f),
 		b_Open(false)
 	{
 		Create(_Depth, _Width, _Height, nPalette);
@@ -173,9 +245,16 @@ public:
 		Data{},
 		Palette(),
 		Pixels(),
-		b_STP4Bpp(true),
-		b_STP16Bpp(false),
+		b_TransparencySuperblack(false),
 		b_TransparencySuperimposed(false),
+		b_TransparencySTP(false),
+		b_TransparencyHalf(false),
+		b_TransparencyFull(true),
+		b_TransparencyInverse(false),
+		b_TransparencyQuarter(false),
+		b_Transparency(false),
+		m_Transparency(Sony_Texture_Transparency::None),
+		m_SearchProgress(0.0f),
 		b_Open(false)
 	{
 	}
@@ -186,14 +265,20 @@ public:
 	}
 
 	/*
-		Check if the texture is open
+		Is the texture is open?
 	*/
 	bool operator !() { return !b_Open; }
 
 	/*
-		Check if the texture is open
+		Is the texture is open?
 	*/
 	bool IsOpen(void) const noexcept { return b_Open; }
+
+	/*
+		Does the texture have either palette or pixel data?
+		 - one or the other is required for saving
+	*/
+	bool IsValid(void) const;
 
 	/*
 		Texture information
@@ -206,27 +291,36 @@ public:
 	String Print(void);
 
 	/*
+		Update Transparency flags
+	*/
+	bool UpdateTransparency(void);
+
+	/*
 		Create
 	*/
 	bool Create(std::uint32_t _Depth, std::uint16_t _Width, std::uint16_t _Height, std::uint16_t nPalette);
 
 	/*
-		Open
+		Open from file
+		- TIM is read from the file at the specified pointer
 	*/
 	std::uintmax_t Open(StdFile& File, std::uintmax_t _Ptr);
 
 	/*
-		Open
+		Open from file
+		- TIM is read from the file at the specified pointer
 	*/
 	bool Open(std::filesystem::path Path, std::uintmax_t _Ptr = 0);
 
 	/*
-		Save
+		Save to file
+		- TIM is written to the file at the specified pointer
 	*/
 	std::uintmax_t Save(StdFile& File, std::uintmax_t _Ptr);
 
 	/*
-		Save
+		Save to file
+		- TIM is written to the file at the specified pointer
 	*/
 	bool Save(std::filesystem::path Path, std::uintmax_t _Ptr = 0);
 
@@ -234,26 +328,32 @@ public:
 		Search
 		 - pair: <Position, Size>
 	*/
-	std::vector<std::pair<std::uintmax_t, std::uintmax_t>> Search(StdFile& File, std::uintmax_t _Ptr);
+	std::vector<std::pair<std::uintmax_t, std::uintmax_t>> Search(StdFile& File, std::uintmax_t _Ptr, std::function<void(float)> ProgressCallback);
 
 	/*
 		Search
 		 - pair: <Position, Size>
 	*/
-	std::vector<std::pair<std::uintmax_t, std::uintmax_t>> Search(std::filesystem::path Path, std::uintmax_t _Ptr = 0);
+	std::vector<std::pair<std::uintmax_t, std::uintmax_t>> Search(std::filesystem::path Path, std::uintmax_t _Ptr, std::function<void(float)> ProgressCallback);
+
+	/*
+		Get search progress
+	*/
+	[[nodiscard]] float GetSearchProgress(void) const noexcept { return m_SearchProgress; }
 
 	/*
 		Close
+		- clear all data and declare texture closed
 	*/
 	void Close(void);
 
 	/*
-		Get file size
+		Get total file size
 	*/
 	[[nodiscard]] std::size_t Size(void) const;
 
 	/*
-		Get depth
+		Get bits per pixel
 	*/
 	[[nodiscard]] std::uint32_t GetDepth(void) const;
 
@@ -270,112 +370,218 @@ public:
 	[[nodiscard]] void SetCF(bool ClutFlag) { Header.ClutFlag = ClutFlag; }
 
 	/*
-		Get CLUT amount
+		Get/Set CLUT VRAM X coordinate
 	*/
-	[[nodiscard]] std::uint32_t GetClutSize(void) const { return Clut.nPalette; }
+	[[nodiscard]] std::uint16_t& ClutX(void) { return Clut.X; }
 
 	/*
-		Get CLUT X coordinate
+		Get/Set CLUT VRAM Y coordinate
 	*/
-	[[nodiscard]] std::int16_t& GetClutX(void) { return Clut.X; }
+	[[nodiscard]] std::uint16_t& ClutY(void) { return Clut.Y; }
 
 	/*
-		Get CLUT Y coordinate
+		Get/Set pixel VRAM X coordinate
 	*/
-	[[nodiscard]] std::int16_t& GetClutY(void) { return Clut.Y; }
+	[[nodiscard]] std::uint16_t& DataX(void) { return Data.X; }
 
 	/*
-		Get data X coordinate
+		Get/Set pixel VRAM Y coordinate
 	*/
-	[[nodiscard]] std::int16_t& GetDataX(void) { return Data.X; }
+	[[nodiscard]] std::uint16_t& DataY(void) { return Data.Y; }
 
 	/*
-		Get data Y coordinate
+		Get max amount of colors per CLUT
 	*/
-	[[nodiscard]] std::int16_t& GetDataY(void) { return Data.Y; }
+	[[nodiscard]] std::uint16_t GetClutColorMax(void) const { return GetDepth() == 4 ? 16 : 256; }
 
 	/*
-		Get width
+		Get total CLUT count
+	*/
+	[[nodiscard]] std::uint16_t GetClutSize(void) const { return (std::uint16_t)Palette.size(); }
+
+	/*
+		Get max CLUT index
+	*/
+	[[nodiscard]] std::uint16_t GetClutMax(void) const { return Palette.empty() ? 0 : (std::uint16_t)Palette.size() - 1; }
+
+	/*
+		Get raw CLUT width
+	*/
+	[[nodiscard]] std::uint32_t GetPaletteWidth(void) const;
+
+	/*
+		Get raw CLUT height
+	*/
+	[[nodiscard]] std::uint32_t GetPaletteHeight(void) const;
+
+	/*
+		Get file size of all raw palettes
+	*/
+	[[nodiscard]] std::uint16_t GetPaletteDataSize(void) const;
+
+	/*
+		Get pixel width
 	*/
 	[[nodiscard]] std::uint32_t GetWidth(void) const;
 
 	/*
-		Set width
+		Set pixel width
 	*/
 	bool SetWidth(std::uint16_t _Width);
 
 	/*
-		Get height
+		Get pixel height
 	*/
 	[[nodiscard]] std::uint32_t GetHeight(void) const;
 
 	/*
-		Set height
+		Set pixel height
 	*/
 	bool SetHeight(std::uint16_t _Height);
 
 	/*
-		Get pixel data
+		Auto-update "Size" field of Data Header
+	*/
+	void UpdateDataSize(void);
+
+	/*
+		Enable or disable Superblack Transparency
+		- when enabled, solid black pixels are semi/fully transparent
+		- disabled by default
+	*/
+	[[nodiscard]] bool& TransparencySuperblack(void) noexcept { return b_TransparencySuperblack; }
+
+	/*
+		Enable or disable Superimposed Transparency
+		- when enabled, color entry at palette index (0) is semi/fully transparent
+		- disabled by default
+	*/
+	[[nodiscard]] bool& TransparencySuperimposed(void) noexcept { return b_TransparencySuperimposed; }
+
+	/*
+		Enable or disable STP Transparency
+		- when enabled, STP flag determines if Semi-Transparency is used
+		- disabled by default
+	*/
+	[[nodiscard]] bool& TransparencySTP(void) noexcept { return b_TransparencySTP; }
+
+	/*
+		Enable or disable Half Transparency
+		- when enabled, 50%back + 50%texture
+		- disabled by default
+	*/
+	[[nodiscard]] bool& TransparencyHalf(void) noexcept { return b_TransparencyHalf; }
+
+	/*
+		Enable or disable Full Transparency
+		- when enabled, 100%back + 100%texture
+		- enabled by default
+	*/
+	[[nodiscard]] bool& TransparencyFull(void) noexcept { return b_TransparencyFull; }
+
+	/*
+		Enable or disable Inverse Transparency
+		- when enabled, 100%back - 100%texture
+		- disabled by default
+	*/
+	[[nodiscard]] bool& TransparencyInverse(void) noexcept { return b_TransparencyInverse; }
+
+	/*
+		Enable or disable Quarter Transparency
+		- when enabled, 100%back + 25%texture
+		- disabled by default
+	*/
+	[[nodiscard]] bool& TransparencyQuarter(void) noexcept { return b_TransparencyQuarter; }
+
+	/*
+		Enable or disable Transparency (external color)
+		- when enabled, "Mask/TransparentColor" is semi/fully transparent
+		- disabled by default
+	*/
+	[[nodiscard]] bool& Transparency(void) noexcept { return b_Transparency; }
+
+	/*
+		Get/Set transparent color (external)
+	*/
+	[[nodiscard]] DWORD& TransparentColor(void) { return m_TransparentColor; }
+
+	/*
+		Get/Set transparency flags
+	*/
+	[[nodiscard]] Sony_Texture_Transparency& TransparencyFlags(void) { return m_Transparency; }
+
+	/*
+		Get raw pixel data
 	*/
 	[[nodiscard]] std::vector<std::uint8_t>& GetPixels(void) { return Pixels; }
 
 	/*
-		Get palette
+		Get raw palette data
 	*/
 	[[nodiscard]] std::vector<std::vector<Sony_Texture_16bpp>>& GetPalette(void) { return Palette; }
 
 	/*
 		Get palette
-		 - palette is not modified
-		 - convert from 4bpp to 8bpp and vice-versa
+		 - export to 4bpp to 8bpp and vice-versa (original palette is not modified)
 		 - converting from 8bpp to 4bpp will result in loss of color (256 -> 16), first 16 colors are preserved
 	*/
 	[[nodiscard]] std::vector<std::vector<Sony_Texture_16bpp>> GetPalette(std::uint32_t _Depth);
 
 	/*
 		Convert unsigned char vector to palette
-		 - palette is not modified
-		 - 256 max palettes read from source
-		 - convert from 4bpp to 8bpp and vice-versa
+		 - read up to 256 max palettes from raw source
+		 - export to 4bpp to 8bpp and vice-versa (original palette is not modified)
 		 - converting from 8bpp to 4bpp will result in loss of color (256 -> 16), first 16 colors are preserved
 	*/
 	[[nodiscard]] std::vector<std::vector<Sony_Texture_16bpp>> ConvertToPalette(std::vector<std::uint8_t> Source) const;
 
 	/*
-		Get/Set transparent color
+		Move palette
 	*/
-	[[nodiscard]] DWORD& GetTransparentColor(void) { return TransparentColor; }
-
-	/*
-		Enable or disable Semitransparency Processing (STP Flag) for 4bpp and 8bpp textures
-		- when enabled, solid black pixels in 4bpp and 8bpp textures are replaced with Mask/TransparentColor
-		- enabled by default
-	*/
-	bool& STP4Bpp(void) noexcept { return b_STP4Bpp; }
-
-	/*
-		Enable or disable Semitransparency Processing (STP Flag) for 16bpp textures
-		- when enabled, solid black pixels in 16bpp textures are replaced with Mask/TransparentColor
-		- disabled by default
-	*/
-	bool& STP16Bpp(void) noexcept { return b_STP16Bpp; }
-
-	/*
-		Enable or disable Superimposed Transparency
-		- when enabled, "TransparentColor" is always set to palette index (0)
-		- disabled by default
-	*/
-	bool& TransparencySuperimposed(void) noexcept { return b_TransparencySuperimposed; }
+	bool MovePalette(std::size_t iClut, bool Right);
 
 	/*
 		Add palette
 	*/
-	void AddPalette(void);
+	bool AddPalette(void);
+
+	/*
+		Add palette
+		 - all palettes are added to the back in sequential order
+	*/
+	void AddPalette(std::vector<std::vector<Sony_Texture_16bpp>> Source);
+
+	/*
+		Add palette from file
+		 - if b_RawData is true, _Filename is interpreted as raw data filename
+		 - if b_RawData is false, _Filename is interpreted as PlayStation TIM filename
+	*/
+	bool AddPalette(bool b_RawData, std::filesystem::path _Filename);
+
+	/*
+		Add palette from file
+	*/
+	bool AddPalette(std::filesystem::path _Filename);
 
 	/*
 		Export all palettes as raw data
 	*/
 	void ExportPalette(std::filesystem::path _Filename);
+
+	/*
+		Export single palette to raw data
+	*/
+	void ExportPalette(std::filesystem::path _Filename, std::size_t iClut);
+
+	/*
+		Export all palettes to Sony Texture Image file
+	*/
+	bool ExportPaletteToTIM(std::filesystem::path _Filename);
+
+	/*
+		Export single palette to file
+	*/
+	bool ExportMicrosoftPalette(std::filesystem::path Filename, std::size_t iClut);
 
 	/*
 		Insert palette
@@ -409,33 +615,62 @@ public:
 		Import palette from file
 		 - entire palette is completely replaced
 	*/
-	bool ImportPalette(StdFile& File, std::uintmax_t _Ptr);
+	bool ImportPalette(StdFile& File, std::uintmax_t _Ptr, std::uint16_t nClut);
 
 	/*
 		Import palette from file
 		 - entire palette is completely replaced
 	*/
-	bool ImportPalette(std::filesystem::path Filename, std::uintmax_t _Ptr);
+	bool ImportPalette(std::filesystem::path Filename, std::uintmax_t _Ptr, std::uint16_t nClut);
 
 	/*
 		Import palette from file
-		 - single palette is imported to iClut index
+		 - single palette is imported to iClut index from raw data
+	*/
+	bool ImportPalette(std::filesystem::path Filename, std::uintmax_t _Ptr, std::size_t iClut);
+
+	/*
+		Import palette from Sony Texture Image file
+		 - entire palette is completely replaced
+	*/
+	bool ImportPaletteFromTIM(std::filesystem::path Filename, std::uintmax_t _Ptr = 0);
+
+	/*
+		Import palette from Sony Texture Image file
+		 - entire palette is completely replaced
+	*/
+	bool ImportPaletteFromTIM(std::unique_ptr<Sony_PlayStation_Texture>& External);
+
+	/*
+		Import single palette from file
 	*/
 	bool ImportMicrosoftPalette(std::filesystem::path Filename, std::size_t iClut);
 
 	/*
-		Export palette from file
-		 - single palette is exported from iClut index
-	*/
-	bool ExportMicrosoftPalette(std::filesystem::path Filename, std::size_t iClut);
-
-	/*
 		Delete palette
 		 - delete palette at specified index
-		 - cannot delete single-only palette (eg, must have at least 1 palette)
 	*/
-	void DeletePalette(std::size_t iClut);
+	bool DeletePalette(std::size_t iClut);
 
+	/*
+		Delete all palettes
+	*/
+	void DeleteAllPalettes(void);
+
+	/*
+		Delete all pixels
+	*/
+	void DeleteAllPixels(void);
+
+	/*
+		Export pixels to raw data
+	*/
+	bool ExportPixels(std::filesystem::path Filename);
+
+	/*
+		Export pixels to Sony Texture Image file
+	*/
+	bool ExportPixelsToTIM(std::filesystem::path Filename);
 	/*
 		Import pixels from unsigned char vector
 	*/
@@ -449,7 +684,22 @@ public:
 	/*
 		Import pixels from file
 	*/
-	std::uintmax_t ImportPixels(StdFile& File, std::uintmax_t _Ptr, std::uint32_t _PixelCount);
+	bool ImportPixels(StdFile& File, std::uintmax_t _Ptr, std::uint32_t _PixelCount);
+
+	/*
+		Import pixels from file
+	*/
+	bool ImportPixels(std::filesystem::path Filename, std::uintmax_t _Ptr);
+
+	/*
+		Import pixels from Sony Texture Image file
+	*/
+	bool ImportPixelsFromTIM(std::filesystem::path Filename, std::uintmax_t _Ptr, bool b_UpdateDepth = false);
+
+	/*
+		Import pixels from Sony Texture Image file
+	*/
+	bool ImportPixelsFromTIM(std::unique_ptr<Sony_PlayStation_Texture>& External, bool b_UpdateDepth);
 
 	/*
 		Get red color from 16bpp pixel/palette entry
@@ -472,14 +722,24 @@ public:
 	[[nodiscard]] bool STP(Sony_Texture_16bpp Color) { return Color.STP; }
 
 	/*
-		Get 4bpp pixel
+		Get/Set 4bpp pixel
 	*/
-	[[nodiscard]] Sony_Texture_4bpp Get4bpp(std::size_t iPixel) { return *reinterpret_cast<Sony_Texture_4bpp*>(&Pixels.data()[iPixel]); }
+	[[nodiscard]] Sony_Texture_4bpp& Get4bpp(std::size_t iPixel) { return *reinterpret_cast<Sony_Texture_4bpp*>(&Pixels.data()[iPixel]); }
 
 	/*
-		Get 8bpp pixel
+		Get/Set 4bpp pixel
 	*/
-	[[nodiscard]] Sony_Texture_8bpp Get8bpp(std::size_t iPixel) { return *reinterpret_cast<Sony_Texture_8bpp*>(&Pixels.data()[iPixel]); }
+	[[nodiscard]] Sony_Texture_4bpp& Get4bpp(std::size_t X, std::size_t Y) { return *reinterpret_cast<Sony_Texture_4bpp*>(&Pixels.data()[(Y * (GetWidth() / 2)) + (X / 2)]); }
+
+	/*
+		Get/Set 8bpp pixel
+	*/
+	[[nodiscard]] Sony_Texture_8bpp& Get8bpp(std::size_t iPixel) { return *reinterpret_cast<Sony_Texture_8bpp*>(&Pixels.data()[iPixel]); }
+
+	/*
+		Get/Set 8bpp pixel
+	*/
+	[[nodiscard]] Sony_Texture_8bpp& Get8bpp(std::size_t X, std::size_t Y) { return *reinterpret_cast<Sony_Texture_8bpp*>(&Pixels.data()[((Y * GetWidth()) + X)]); }
 
 	/*
 		Get 16bpp pixel
@@ -494,7 +754,7 @@ public:
 	/*
 		Create 16bpp color
 	*/
-	[[nodiscard]] Sony_Texture_16bpp Create16bpp(std::uint8_t R, std::uint8_t G, std::uint8_t B, bool STP);
+	[[nodiscard]] Sony_Texture_16bpp Create16bpp(std::uint8_t R, std::uint8_t G, std::uint8_t B, bool STP) { return { std::uint16_t(R >> 3), std::uint16_t(G >> 3), std::uint16_t(B >> 3), STP }; }
 
 	/*
 		Create 16bpp color
@@ -509,16 +769,51 @@ public:
 	/*
 		Get 24bpp pixel
 	*/
-	[[nodiscard]] Sony_Texture_24bpp Get24bpp(std::size_t X, std::size_t Y) { return *reinterpret_cast<Sony_Texture_24bpp*>(&Pixels.data()[(Y * GetWidth() + X) * sizeof(Sony_Texture_24bpp)]); }
+	[[nodiscard]] Sony_Texture_24bpp Get24bpp(std::size_t X, std::size_t Y) { return *reinterpret_cast<Sony_Texture_24bpp*>(&Pixels.data()[(Y * ((GetWidth() * 24 + 7) / 8)) + (X * (24 / 8))]); }
+
+	/*
+		Create 24bpp pixel
+	*/
+	[[nodiscard]] Sony_Texture_24bpp Create24bpp(std::uint8_t R0, std::uint8_t G0, std::uint8_t B0, std::uint8_t R1, std::uint8_t G1, std::uint8_t B1) { return { R0, G0, B0, R1, G1, B1 }; }
+
+	/*
+		Create 24bpp pixel
+	*/
+	[[nodiscard]] Sony_Texture_24bpp Create24bpp(DWORD Color0, DWORD Color1) { return { GetRValue(Color0), GetGValue(Color0), GetBValue(Color0), GetRValue(Color1), GetGValue(Color1), GetBValue(Color1) }; }
+
+	/*
+		Set Pixel (4bpp)
+	*/
+	void SetPixel(uint32_t X, uint32_t Y, Sony_Texture_4bpp Color) { *reinterpret_cast<Sony_Texture_4bpp*>(&Pixels.data()[(Y * (GetWidth() / 2)) + (X / 2)]) = Color; }
+
+	/*
+		Set Pixel (8bpp)
+	*/
+	void SetPixel(uint32_t X, uint32_t Y, Sony_Texture_8bpp Color) { *reinterpret_cast<Sony_Texture_8bpp*>(&Pixels.data()[((Y * GetWidth()) + X)]) = Color; }
+
+	/*
+		Set Pixel (16bpp)
+	*/
+	void SetPixel(uint32_t X, uint32_t Y, Sony_Texture_16bpp Color) { *reinterpret_cast<Sony_Texture_16bpp*>(&Pixels.data()[(Y * GetWidth() + X) * sizeof(Sony_Texture_16bpp)]) = Color; }
+
+	/*
+		Set Pixel (24bpp)
+	*/
+	void SetPixel(uint32_t X, uint32_t Y, Sony_Texture_24bpp Color) { *reinterpret_cast<Sony_Texture_24bpp*>(&Pixels.data()[(Y * ((GetWidth() * 24 + 7) / 8)) + (X * (24 / 8))]) = Color; }
 
 	/*
 		Update Standard Image Palette
 	*/
-	void UpdateBitmapPalette(std::unique_ptr<Standard_Image>& Image, std::size_t iClut = 0, DWORD Mask = TransparentColor);
+	void UpdateBitmapPalette(std::unique_ptr<Standard_Image>& Image, std::size_t iClut = 0, DWORD Mask = m_TransparentColor);
 
 	/*
 		Get Standard Image Object
 	*/
-	std::unique_ptr<Standard_Image> GetBitmap(std::size_t iClut = 0, DWORD Mask = TransparentColor);
+	std::unique_ptr<Standard_Image> GetBitmap(std::size_t iClut = 0, DWORD Mask = m_TransparentColor);
+
+	/*
+		Save As Bitmap
+	*/
+	bool SaveAsBitmap(std::filesystem::path Filename, std::size_t iClut = 0) { return GetBitmap(iClut)->SaveAsBitmap(Filename); }
 
 };
