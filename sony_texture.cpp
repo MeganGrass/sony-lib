@@ -440,7 +440,7 @@ std::uintmax_t Sony_PlayStation_Texture::Open(StdFile& File, std::uintmax_t _Ptr
 	{
 		if (Header.Mode == 0)
 		{
-			if (Data.Width % 4)
+			if ((Data.Width * 4) % 4)
 			{
 				Str.Message(L"PlayStation Texture: Error, 4bpp width must be a multiple of 4 at 0x%llX in \"%ws\"", OrigPtr, File.GetPath().filename().wstring().c_str());
 				Close();
@@ -449,7 +449,7 @@ std::uintmax_t Sony_PlayStation_Texture::Open(StdFile& File, std::uintmax_t _Ptr
 		}
 		else
 		{
-			if (Data.Width % 2)
+			if ((Data.Width * 2) % 2)
 			{
 				Str.Message(L"PlayStation Texture: Error, 8bpp width must be a multiple of 2 at 0x%llX in \"%ws\"", OrigPtr, File.GetPath().filename().wstring().c_str());
 				Close();
@@ -680,25 +680,22 @@ std::vector<std::pair<std::uintmax_t, std::uintmax_t>> Sony_PlayStation_Texture:
 
 			if (DataSize)
 			{
-				if (Header.Mode <= 1)
+				if (Header.Mode == 0)
 				{
-					if (Header.Mode == 0)
+					if ((Data.Width * 4) % 4)
 					{
-						if (Data.Width % 4)
-						{
-							std::cout << "PlayStation Texture: Error, 4bpp width must be a multiple of 4 at 0x" << std::hex << pTexture << std::endl;
-							_Ptr = ++pTexture;
-							continue;
-						}
+						std::cout << "PlayStation Texture: Error, 4bpp width must be a multiple of 4 at 0x" << std::hex << pTexture << std::endl;
+						_Ptr = ++pTexture;
+						continue;
 					}
-					else
+				}
+				else if (Header.Mode == 1)
+				{
+					if ((Data.Width * 2) % 2)
 					{
-						if (Data.Width % 2)
-						{
-							std::cout << "PlayStation Texture: Error, 8bpp width must be a multiple of 2 at 0x" << std::hex << pTexture << std::endl;
-							_Ptr = ++pTexture;
-							continue;
-						}
+						std::cout << "PlayStation Texture: Error, 8bpp width must be a multiple of 2 at 0x" << std::hex << pTexture << std::endl;
+						_Ptr = ++pTexture;
+						continue;
 					}
 				}
 
@@ -813,6 +810,118 @@ std::vector<std::pair<std::uintmax_t, std::uintmax_t>> Sony_PlayStation_Texture:
 
 
 /*
+	Open CLUT from file
+*/
+std::uintmax_t Sony_PlayStation_Texture::OpenCLT(StdFile& File, std::uintmax_t _Ptr, bool b_Add)
+{
+	if (!File.IsOpen())
+	{
+		if (!File.Open(File.GetPath(), FileAccessMode::Read, true, false))
+		{
+			Str.Message(L"PlayStation Texture: Error, could not open at 0x%llX in \"%ws\"", _Ptr, File.GetPath().filename().wstring().c_str());
+			return _Ptr;
+		}
+	}
+
+	std::uintmax_t OrigPtr = _Ptr;
+
+	Sony_Texture_Clut_File ClutHeader{};
+	File.Read(_Ptr, &ClutHeader, sizeof(Sony_Texture_Clut_File));
+
+	{
+		if (ClutHeader.ID != 0x11)
+		{
+			Str.Message(L"PlayStation Texture: Error, invalid clut header id (%d) at 0x%llX in \"%ws\"", ClutHeader.ID, OrigPtr, File.GetPath().filename().wstring().c_str());
+			return OrigPtr;
+		}
+
+		if (ClutHeader.Version != 0)
+		{
+			Str.Message(L"PlayStation Texture: Error, invalid clut header version (%d) at 0x%llX in \"%ws\"", ClutHeader.Version, OrigPtr, File.GetPath().filename().wstring().c_str());
+			return OrigPtr;
+		}
+
+		if (ClutHeader.Reserved0 != 0)
+		{
+			Str.Message(L"PlayStation Texture: Error, invalid clut header reserved[0] (%d) at 0x%llX in \"%ws\"", ClutHeader.Reserved0, OrigPtr, File.GetPath().filename().wstring().c_str());
+			return OrigPtr;
+		}
+
+		if (ClutHeader.Mode != 2)
+		{
+			Str.Message(L"PlayStation Texture: Error, invalid clut header mode (%d) at 0x%llX in \"%ws\"", ClutHeader.Mode, OrigPtr, File.GetPath().filename().wstring().c_str());
+			return OrigPtr;
+		}
+
+		if (ClutHeader.Reserved1 != 0)
+		{
+			Str.Message(L"PlayStation Texture: Error, invalid clut header reserved[1] (%d) at 0x%llX in \"%ws\"", ClutHeader.Reserved1, OrigPtr, File.GetPath().filename().wstring().c_str());
+			return OrigPtr;
+		}
+
+		_Ptr += sizeof(Sony_Texture_Clut_File);
+	}
+
+	Sony_Texture_Clut ClutData{};
+	File.Read(_Ptr, &ClutData, sizeof(Sony_Texture_Clut));
+
+	{
+		if (ClutData.Size != ((ClutData.nPalette * (ClutData.nColor * sizeof(Sony_Texture_16bpp))) + sizeof(Sony_Texture_Clut)))
+		{
+			Str.Message(L"PlayStation Texture: Error, invalid clut size (%d bytes) at 0x%llX in \"%ws\"", ClutData.Size, OrigPtr, File.GetPath().filename().wstring().c_str());
+			return OrigPtr;
+		}
+
+		if ((!ClutData.Size) || (ClutData.Size > (std::uint32_t)File.Size()))
+		{
+			Str.Message(L"PlayStation Texture: Error, invalid clut size (%d bytes) at 0x%llX in \"%ws\"", ClutData.Size, OrigPtr, File.GetPath().filename().wstring().c_str());
+			return OrigPtr;
+		}
+
+		if (!ClutData.nColor)
+		{
+			Str.Message(L"PlayStation Texture: Error, invalid clut width (%d bytes) at 0x%llX in \"%ws\"", ClutData.nColor, OrigPtr, File.GetPath().filename().wstring().c_str());
+			return OrigPtr;
+		}
+
+		if (!ClutData.nPalette)
+		{
+			Str.Message(L"PlayStation Texture: Error, invalid clut height (%d bytes) at 0x%llX in \"%ws\"", ClutData.nPalette, OrigPtr, File.GetPath().filename().wstring().c_str());
+			return OrigPtr;
+		}
+
+		if ((ClutData.X < 0) || (ClutData.X > (std::int16_t)(1024 - ClutData.nColor)))
+		{
+			Str.Message(L"PlayStation Texture: Error, invalid clut x (%d) at 0x%llX in \"%ws\"", ClutData.X, OrigPtr, File.GetPath().filename().wstring().c_str());
+			return OrigPtr;
+		}
+
+		if ((ClutData.Y < 0) || (ClutData.Y > (std::int16_t)(512 - ClutData.nPalette)))
+		{
+			Str.Message(L"PlayStation Texture: Error, invalid clut y (%d) at 0x%llX in \"%ws\"", ClutData.Y, OrigPtr, File.GetPath().filename().wstring().c_str());
+			return OrigPtr;
+		}
+
+		_Ptr += sizeof(Sony_Texture_Clut);
+	}
+
+	std::vector<Sony_Texture_16bpp> ExternalPalette(ClutData.nPalette * ClutData.nColor);
+	File.Read(_Ptr, ExternalPalette.data(), ExternalPalette.size());
+
+	if (!b_Add)
+	{
+		AddPalette(ConvertToPalette(ExternalPalette));
+	}
+	else
+	{
+		ImportPalette(ConvertToPalette(ExternalPalette));
+	}
+
+	return _Ptr + ExternalPalette.size() * sizeof(Sony_Texture_16bpp);
+}
+
+
+/*
 	Close
 */
 void Sony_PlayStation_Texture::Close(void)
@@ -831,7 +940,7 @@ void Sony_PlayStation_Texture::Close(void)
 	b_TransparencySuperimposed = false;
 	b_TransparencySTP = false;
 	b_TransparencyHalf = false;
-	b_TransparencyFull = false;
+	b_TransparencyFull = true;
 	b_TransparencyInverse = false;
 	b_TransparencyQuarter = false;
 	b_Transparency = false;
@@ -871,50 +980,34 @@ std::size_t Sony_PlayStation_Texture::Size(void) const
 /*
 	Get depth
 */
-std::uint32_t Sony_PlayStation_Texture::GetDepth(void) const
+std::uint16_t Sony_PlayStation_Texture::GetDepth(void) const
 {
-	if (!b_Open) { return 0; }
-
-	std::uint32_t _Depth = 0;
-
 	switch (Header.Mode)
 	{
-	case 0: _Depth = 4; break;
-	case 1: _Depth = 8; break;
-	case 2: _Depth = 16; break;
-	case 3: _Depth = 24; break;
+	case 0: return 4;
+	case 1: return 8;
+	case 2: return 16;
+	case 3: return 24;
 	}
 
-	return _Depth;
+	return 0;
 }
 
 
 /*
 	Get width
 */
-std::uint32_t Sony_PlayStation_Texture::GetWidth(void) const
+std::uint16_t Sony_PlayStation_Texture::GetWidth(void) const
 {
-	if (!b_Open) { return 0; }
-
-	std::uint32_t Width = 0;
-
 	switch (Header.Mode)
 	{
-	case 0:
-		Width = Data.Width * 4;
-		break;
-	case 1:
-		Width = Data.Width * 2;
-		break;
-	case 2:
-		Width = Data.Width;
-		break;
-	case 3:
-		Width = ((Data.Width * 2) / 3);
-		break;
+	case 0: return Data.Width * 4;
+	case 1: return Data.Width * 2;
+	case 2: return Data.Width;
+	case 3: return ((Data.Width * 2) / 3);
 	}
 
-	return Width;
+	return 0;
 }
 
 
@@ -929,9 +1022,17 @@ bool Sony_PlayStation_Texture::SetWidth(std::uint16_t _Width)
 	{
 	case 0:
 		Data.Width = _Width / 4;
+		if ((Data.Width * 4) % 4)
+		{
+			Data.Width += 4 - (Data.Width % 4);
+		}
 		break;
 	case 1:
 		Data.Width = _Width / 2;
+		if ((Data.Width * 2) % 2)
+		{
+			Data.Width += 2 - (Data.Width % 2);
+		}
 		break;
 	case 2:
 		Data.Width = _Width;
@@ -950,10 +1051,8 @@ bool Sony_PlayStation_Texture::SetWidth(std::uint16_t _Width)
 /*
 	Get height
 */
-std::uint32_t Sony_PlayStation_Texture::GetHeight(void) const
+std::uint16_t Sony_PlayStation_Texture::GetHeight(void) const
 {
-	if (!b_Open) { return 0; }
-
 	return Data.Height;
 }
 
@@ -1021,7 +1120,7 @@ std::uint16_t Sony_PlayStation_Texture::GetPaletteDataSize(void) const
 /*
 	Get raw palette width
 */
-std::uint32_t Sony_PlayStation_Texture::GetPaletteWidth(void) const
+std::uint16_t Sony_PlayStation_Texture::GetPaletteWidth(void) const
 {
 	if (!b_Open) { return 0; }
 
@@ -1036,7 +1135,7 @@ std::uint32_t Sony_PlayStation_Texture::GetPaletteWidth(void) const
 /*
 	Get raw palette height
 */
-std::uint32_t Sony_PlayStation_Texture::GetPaletteHeight(void) const
+std::uint16_t Sony_PlayStation_Texture::GetPaletteHeight(void) const
 {
 	if (!b_Open) { return 0; }
 
@@ -1089,7 +1188,7 @@ std::vector<std::vector<Sony_Texture_16bpp>> Sony_PlayStation_Texture::ConvertTo
 
 	if (Source.empty()) { return std::vector<std::vector<Sony_Texture_16bpp>> {}; }
 
-	if (Source.size() > static_cast<unsigned long long>(PaletteSize) * MAX_TIM_PALETTE)
+	if (Source.size() > (size_t)PaletteSize * MAX_TIM_PALETTE)
 	{
 		std::cout << "Attempting to read too many palettes (" << Source.size() / PaletteSize << ")" << ", limiting to " << MAX_TIM_PALETTE << std::endl;
 		PaletteSize = MAX_TIM_PALETTE;
@@ -1102,7 +1201,7 @@ std::vector<std::vector<Sony_Texture_16bpp>> Sony_PlayStation_Texture::ConvertTo
 
 	std::size_t nPalette = Source.size() / PaletteSize;
 
-	nPalette = std::clamp(nPalette, static_cast<std::size_t>(0), static_cast<std::size_t>(MAX_TIM_PALETTE));
+	nPalette = std::clamp(nPalette, (size_t)0, (size_t)MAX_TIM_PALETTE);
 
 	std::vector<std::vector<Sony_Texture_16bpp>> NewPalette(nPalette);
 
@@ -1121,6 +1220,46 @@ std::vector<std::vector<Sony_Texture_16bpp>> Sony_PlayStation_Texture::ConvertTo
 		}
 	}
 
+	return NewPalette;
+}
+
+
+/*
+	Convert 16bpp vector to palette
+*/
+std::vector<std::vector<Sony_Texture_16bpp>> Sony_PlayStation_Texture::ConvertToPalette(std::vector<Sony_Texture_16bpp> Source) const
+{
+	std::uint32_t nColors = GetDepth() == 4 ? 16 : 256;
+
+	std::uint32_t PaletteSize = (nColors * sizeof(Sony_Texture_16bpp));
+
+	if (Source.empty()) { return std::vector<std::vector<Sony_Texture_16bpp>> {}; }
+
+	if (Source.size() % PaletteSize)
+	{
+		Source.resize(Source.size() + (PaletteSize - (Source.size() % PaletteSize)));
+	}
+
+	std::size_t nPalette = Source.size() / PaletteSize;
+
+	nPalette = std::clamp(nPalette, (size_t)0, (size_t)MAX_TIM_PALETTE);
+
+	std::vector<std::vector<Sony_Texture_16bpp>> NewPalette(nPalette);
+
+	for (std::size_t i = 0; i < nPalette; ++i)
+	{
+		NewPalette[i].resize(nColors);
+
+		for (std::size_t x = 0; x < nColors; ++x)
+		{
+			std::size_t pSource = (i * nColors + x);
+
+			if (pSource < Source.size())
+			{
+				NewPalette[i][x] = Source[pSource];
+			}
+		}
+	}
 	return NewPalette;
 }
 
@@ -1215,7 +1354,7 @@ bool Sony_PlayStation_Texture::ExportPaletteToTIM(std::filesystem::path _Filenam
 
 	ExternalTexture->Str.hWnd = Str.hWnd;
 
-	ExternalTexture->Create(GetDepth(), NULL, NULL, uint16_t(GetClutSize()));
+	ExternalTexture->Create(GetDepth(), NULL, NULL, uint16_t(GetClutCount()));
 
 	if (!ExternalTexture->IsOpen())
 	{
@@ -1262,7 +1401,7 @@ bool Sony_PlayStation_Texture::ExportMicrosoftPalette(std::filesystem::path File
 		return false;
 	}
 
-	iClut = std::clamp(iClut, static_cast<std::size_t>(0), Palette.size() - 1);
+	iClut = std::clamp(iClut, (size_t)0, (size_t)GetClutMax());
 
 	std::uint16_t DataSize = GetDepth() == 4 ? 16 * 4 + 4 : 256 * 4 + 4;
 	std::uint16_t Version = 0x0300;
@@ -1323,7 +1462,7 @@ bool Sony_PlayStation_Texture::ImportPalette(std::vector<Sony_Texture_16bpp> _Pa
 
 	Clut.Size = ((Clut.nPalette * (Clut.nColor * sizeof(Sony_Texture_16bpp))) + sizeof(Sony_Texture_Clut));
 
-	iClut = std::clamp(iClut, static_cast<std::size_t>(0), Palette.size() - 1);
+	iClut = std::clamp(iClut, (size_t)0, (size_t)GetClutMax());
 
 	for (std::size_t i = 0; i < Palette[iClut].size(); i++)
 	{
@@ -1575,15 +1714,15 @@ bool Sony_PlayStation_Texture::ImportMicrosoftPalette(std::filesystem::path File
 	if (iClut >= Palette.size())
 	{
 		Palette.resize(++Clut.nPalette);
-		Palette[Palette.size() - 1].resize(GetDepth() == 4 ? 16 : 256);
+		Palette[GetClutMax()].resize(GetDepth() == 4 ? 16 : 256);
 
 		Clut.nColor = GetDepth() == 4 ? 16 : 256;
 		Clut.Size = ((Clut.nPalette * (Clut.nColor * sizeof(Sony_Texture_16bpp))) + sizeof(Sony_Texture_Clut));
 
-		iClut = Palette.size() - 1;
+		iClut = GetClutMax();
 	}
 
-	iClut = std::clamp(iClut, static_cast<std::size_t>(0), Palette.size() - 1);
+	iClut = std::clamp(iClut, (size_t)0, (size_t)GetClutMax());
 
 	std::uint16_t DataSize = 0;
 	std::uint16_t nColors = 0;
@@ -1655,7 +1794,7 @@ bool Sony_PlayStation_Texture::AddPalette(void)
 
 	Palette.resize(++Clut.nPalette);
 
-	Palette[Palette.size() - 1] = std::vector<Sony_Texture_16bpp>(GetDepth() == 4 ? 16 : 256);
+	Palette[GetClutMax()] = std::vector<Sony_Texture_16bpp>(GetDepth() == 4 ? 16 : 256);
 
 	Clut.nColor = GetDepth() == 4 ? 16 : 256;
 
@@ -1663,25 +1802,25 @@ bool Sony_PlayStation_Texture::AddPalette(void)
 
 	if (GetDepth() == 4)
 	{
-		for (std::size_t i = 0; i < Palette[Palette.size() - 1].size(); i++)
+		for (std::size_t i = 0; i < Palette[GetClutMax()].size(); i++)
 		{
-			Palette[Palette.size() - 1][i] = Create16bpp((uint8_t)i * 16, (uint8_t)i * 16, (uint8_t)i * 16, true);
+			Palette[GetClutMax()][i] = Create16bpp((uint8_t)i * 16, (uint8_t)i * 16, (uint8_t)i * 16, true);
 		}
 	}
 	else //if (GetDepth() == 8)
 	{
-		for (std::size_t i = 0; i < Palette[Palette.size() - 1].size(); i++)
+		for (std::size_t i = 0; i < Palette[GetClutMax()].size(); i++)
 		{
-			Palette[Palette.size() - 1][i] = Create16bpp((uint8_t)i, (uint8_t)i, (uint8_t)i, true);
+			Palette[GetClutMax()][i] = Create16bpp((uint8_t)i, (uint8_t)i, (uint8_t)i, true);
 		}
 	}
 
 	return true;
 
-	/*Palette[Palette.size() - 1][1] = Create16bpp(123, 165, 255, true);
-	Palette[Palette.size() - 1][2] = Create16bpp(255, 123, 74, true);
-	Palette[Palette.size() - 1][3] = Create16bpp(255, 165, 198, true);
-	Palette[Palette.size() - 1][4] = Create16bpp(107, 255, 156, true);*/
+	/*Palette[GetClutMax()][1] = Create16bpp(123, 165, 255, true);
+	Palette[GetClutMax()][2] = Create16bpp(255, 123, 74, true);
+	Palette[GetClutMax()][3] = Create16bpp(255, 165, 198, true);
+	Palette[GetClutMax()][4] = Create16bpp(107, 255, 156, true);*/
 }
 
 
@@ -1760,7 +1899,7 @@ bool Sony_PlayStation_Texture::AddPalette(bool b_RawData, std::filesystem::path 
 
 		if (!ExternalTexture->Header.ClutFlag)
 		{
-			Str.Message(L"PlayStation Texture: Error, external texture does not contain any color palettes");
+			Str.Message(L"PlayStation Texture: Error, \"%ws\" does not contain any color palettes", _Filename.filename().wstring().c_str());
 			return false;
 		}
 
@@ -1778,7 +1917,7 @@ bool Sony_PlayStation_Texture::AddPalette(std::filesystem::path _Filename)
 {
 	if (!b_Open) { return false; }
 
-	std::uint32_t iLastPalette = GetClutSize();
+	std::uint32_t iLastPalette = GetClutCount();
 
 	StringW Extension = _Filename.extension().wstring();
 

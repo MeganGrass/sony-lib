@@ -42,6 +42,26 @@ struct Sony_Texture_Header
 };
 
 
+struct Sony_Texture_Clut_File
+{
+	std::uint32_t ID : 8;			// 0x11
+	std::uint32_t Version : 8;		// Always zero (0)
+	std::uint32_t Reserved0 : 16;	// Always zero (0)
+	std::uint32_t Mode : 3;			// Always 2 (16bpp)
+	std::uint32_t Reserved1 : 29;	// Always zero (0)
+};
+
+
+struct Sony_Texture_Data_File
+{
+	std::uint32_t ID : 8;			// 0x12
+	std::uint32_t Version : 8;		// Always zero (0)
+	std::uint32_t Reserved0 : 16;	// Always zero (0)
+	std::uint32_t Mode : 3;			// 0 = 4bpp, 1 = 8bpp, 2 = 16bpp, 3 = 24bpp, 4 = Mixed
+	std::uint32_t Reserved1 : 29;	// Always zero (0)
+};
+
+
 struct Sony_Texture_Clut
 {
 	std::uint32_t Size;				// Size of CLUT Data
@@ -101,7 +121,7 @@ struct Sony_Texture_24bpp
 enum class Sony_Texture_Transparency : int
 {
 	None = 0,						// No Options
-	Superblack = (1 << 0),			// Semi/Full Transparency for solid black
+	Superblack = (1 << 0),			// Full Transparency for solid black
 	Superimposed = (1 << 1),		// Semi/Full Transparency for palette index 0
 	External = (1 << 2),			// Semi/Full Transparency for external source
 	Half = (1 << 3),				// Semi-Transparency: 50%back + 50%texture (incompatible with Full, Inverse and Quarter)
@@ -259,10 +279,7 @@ public:
 	{
 	}
 
-	virtual ~Sony_PlayStation_Texture(void)
-	{
-		Close();
-	}
+	~Sony_PlayStation_Texture(void) = default;
 
 	/*
 		Is the texture is open?
@@ -325,13 +342,13 @@ public:
 	bool Save(std::filesystem::path Path, std::uintmax_t _Ptr = 0);
 
 	/*
-		Search
+		Search for TIM files
 		 - pair: <Position, Size>
 	*/
 	std::vector<std::pair<std::uintmax_t, std::uintmax_t>> Search(StdFile& File, std::uintmax_t _Ptr, std::function<void(float)> ProgressCallback);
 
 	/*
-		Search
+		Search for TIM files
 		 - pair: <Position, Size>
 	*/
 	std::vector<std::pair<std::uintmax_t, std::uintmax_t>> Search(std::filesystem::path Path, std::uintmax_t _Ptr, std::function<void(float)> ProgressCallback);
@@ -340,6 +357,14 @@ public:
 		Get search progress
 	*/
 	[[nodiscard]] float GetSearchProgress(void) const noexcept { return m_SearchProgress; }
+
+	/*
+		Open palette/s from file
+		- CLT is read from the file at the specified pointer
+		- if b_Add is true, palettes are added to the back in sequential order
+		- if b_Add is false, entire palette is replaced
+	*/
+	std::uintmax_t OpenCLT(StdFile& File, std::uintmax_t _Ptr, bool b_Add);
 
 	/*
 		Close
@@ -355,7 +380,7 @@ public:
 	/*
 		Get bits per pixel
 	*/
-	[[nodiscard]] std::uint32_t GetDepth(void) const;
+	[[nodiscard]] std::uint16_t GetDepth(void) const;
 
 	/*
 		Get clut flag
@@ -397,7 +422,7 @@ public:
 	/*
 		Get total CLUT count
 	*/
-	[[nodiscard]] std::uint16_t GetClutSize(void) const { return (std::uint16_t)Palette.size(); }
+	[[nodiscard]] std::uint16_t GetClutCount(void) const { return (std::uint16_t)Palette.size(); }
 
 	/*
 		Get max CLUT index
@@ -407,12 +432,12 @@ public:
 	/*
 		Get raw CLUT width
 	*/
-	[[nodiscard]] std::uint32_t GetPaletteWidth(void) const;
+	[[nodiscard]] std::uint16_t GetPaletteWidth(void) const;
 
 	/*
 		Get raw CLUT height
 	*/
-	[[nodiscard]] std::uint32_t GetPaletteHeight(void) const;
+	[[nodiscard]] std::uint16_t GetPaletteHeight(void) const;
 
 	/*
 		Get file size of all raw palettes
@@ -422,7 +447,7 @@ public:
 	/*
 		Get pixel width
 	*/
-	[[nodiscard]] std::uint32_t GetWidth(void) const;
+	[[nodiscard]] std::uint16_t GetWidth(void) const;
 
 	/*
 		Set pixel width
@@ -432,7 +457,7 @@ public:
 	/*
 		Get pixel height
 	*/
-	[[nodiscard]] std::uint32_t GetHeight(void) const;
+	[[nodiscard]] std::uint16_t GetHeight(void) const;
 
 	/*
 		Set pixel height
@@ -534,6 +559,14 @@ public:
 		 - converting from 8bpp to 4bpp will result in loss of color (256 -> 16), first 16 colors are preserved
 	*/
 	[[nodiscard]] std::vector<std::vector<Sony_Texture_16bpp>> ConvertToPalette(std::vector<std::uint8_t> Source) const;
+
+	/*
+		Convert 16bpp vector to palette
+		 - read up to 256 max palettes from raw source
+		 - export to 4bpp to 8bpp and vice-versa (original palette is not modified)
+		 - converting from 8bpp to 4bpp will result in loss of color (256 -> 16), first 16 colors are preserved
+	*/
+	[[nodiscard]] std::vector<std::vector<Sony_Texture_16bpp>> ConvertToPalette(std::vector<Sony_Texture_16bpp> Source) const;
 
 	/*
 		Move palette
