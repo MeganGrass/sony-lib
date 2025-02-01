@@ -1853,6 +1853,8 @@ void Sony_PlayStation_Texture::AddPalette(std::vector<std::vector<Sony_Texture_1
 		Clut.nPalette += static_cast<std::uint16_t>(Source.size());
 	}
 
+	Clut.nColor = GetDepth() == 4 ? 16 : 256;
+
 	Clut.Size = ((Clut.nPalette * (Clut.nColor * sizeof(Sony_Texture_16bpp))) + sizeof(Sony_Texture_Clut));
 
 	Palette.resize(Clut.nPalette);
