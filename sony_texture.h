@@ -16,6 +16,8 @@
 
 #include <sony_bitstream.h>
 
+#include <sony_texture_2.h>
+
 #ifdef DeletePalette
 #undef DeletePalette
 #endif
@@ -45,57 +47,13 @@ struct Sony_Texture_Data
 };
 
 
-struct Sony_Texture_4bpp
-{
-	std::uint8_t Pix0 : 4;			// pixel 0
-	std::uint8_t Pix1 : 4;			// pixel 1
-	std::uint8_t Pix2 : 4;			// pixel 2
-	std::uint8_t Pix3 : 4;			// pixel 3
-};
+typedef Pixel_4bpp Sony_Pixel_4bpp;
 
+typedef Pixel_8bpp Sony_Pixel_8bpp;
 
-struct Sony_Texture_8bpp
-{
-	std::uint8_t Pix0 : 8;			// pixel 0
-	std::uint8_t Pix1 : 8;			// pixel 1
-};
+typedef Pixel_16bppL Sony_Pixel_16bpp;
 
-
-struct Sony_Texture_16bpp
-{
-	std::uint16_t R : 5;			// red
-	std::uint16_t G : 5;			// green
-	std::uint16_t B : 5;			// blue
-	std::uint16_t STP : 1;			// semi-transparency processing flag
-	bool operator ! (void) const
-	{
-		return !this->R && !this->G && !this->B && !this->STP;
-	}
-	bool operator = (const Sony_Texture_16bpp& External)
-	{
-		std::memcpy(this, &External, sizeof(Sony_Texture_16bpp));
-		return true;
-	}
-	bool operator == (const Sony_Texture_16bpp& External) const
-	{
-		return (this->R == External.R) && (this->G == External.G) && (this->B == External.B) && (this->STP == External.STP);
-	}
-	bool operator != (const Sony_Texture_16bpp& External) const
-	{
-		return (this->R != External.R) || (this->G != External.G) || (this->B != External.B) || (this->STP != External.STP);
-	}
-};
-
-
-struct Sony_Texture_24bpp
-{
-	std::uint8_t R0 : 8;			// red	\|
-	std::uint8_t G0 : 8;			// green |-> pixel 0
-	std::uint8_t B0 : 8;			// blue	/|
-	std::uint8_t R1 : 8;			// red	\|
-	std::uint8_t G1 : 8;			// green |-> pixel 1
-	std::uint8_t B1 : 8;			// blue	/|
-};
+typedef Pixel_24bppL Sony_Pixel_24bpp;
 
 
 #pragma pack(pop)
@@ -104,9 +62,9 @@ struct Sony_Texture_24bpp
 enum class Sony_Texture_Transparency : int32_t
 {
 	None = 0,						// No Options
-	Superblack = (1 << 0),			// Full Transparency for solid black
-	Superimposed = (1 << 1),		// Semi/Full Transparency for palette index 0
-	External = (1 << 2),			// Semi/Full Transparency for external source
+	Superblack = (1 << 0),			// Full Transparency for solid black pixels
+	Superimposed = (1 << 1),		// Semi/Full Transparency for palette entry zero (0)
+	External = (1 << 2),			// Semi/Full Transparency for external color source
 	Half = (1 << 3),				// Semi-Transparency: 50%back + 50%texture (incompatible with Full, Inverse and Quarter)
 	Full = (1 << 4),				// Semi-Transparency: 100%back + 100%texture (incompatible with Half, Inverse and Quarter)
 	Inverse = (1 << 5),				// Semi-Transparency: 100%back - 100%texture (incompatible with Half, Full and Quarter)
@@ -147,13 +105,13 @@ struct Sony_Texture_Create_Ex
 	std::uintmax_t pPixel;			// absolute pointer to pixel data/file
 	std::filesystem::path Palette;	// palette file
 	std::filesystem::path Pixel;	// pixel file
-	explicit Sony_Texture_Create_Ex(void) : Depth(16), Width(0), Height(0), nPalette(0), PaletteType(ImageType::None), PixelType(ImageType::None), pPalette(0), pPixel(0), Palette(), Pixel() {}
+	explicit Sony_Texture_Create_Ex(void) : Depth(16), Width(0), Height(0), nPalette(0), PaletteType(ImageType::null), PixelType(ImageType::null), pPalette(0), pPixel(0), Palette(), Pixel() {}
 };
 
 
 class Sony_PlayStation_Texture {
 
-	// Texture Image (*.TIM) File Header
+	// File Header
 	Sony_Texture_Header m_Header;
 
 	// Palette Header
@@ -163,7 +121,7 @@ class Sony_PlayStation_Texture {
 	Sony_Texture_Data m_PixelHeader;
 
 	// Palette
-	std::vector<Sony_Texture_16bpp> m_Palette;
+	std::vector<Sony_Pixel_16bpp> m_Palette;
 
 	// Pixels
 	std::vector<std::uint8_t> m_Pixels;
@@ -309,12 +267,12 @@ public:
 	/*
 		Does the texture have either palette or pixel data?
 	*/
-	bool IsValid(void) const { return !(m_Pixels.empty() && m_Palette.empty()); }
+	[[nodiscard]] bool IsValid(void) const { return !(m_Pixels.empty() && m_Palette.empty()); }
 
 	/*
 		Get basic information about the texture
 	*/
-	String About(void);
+	[[nodiscard]] String About(void);
 
 	/*
 		Print basic information about the texture
@@ -422,7 +380,7 @@ public:
 	/*
 		Get/Set raw palette data
 	*/
-	[[nodiscard]] std::vector<Sony_Texture_16bpp>& GetPalette(void) { return m_Palette; }
+	[[nodiscard]] std::vector<Sony_Pixel_16bpp>& GetPalette(void) { return m_Palette; }
 
 	/*
 		Get max amount of palettes that can be stored
@@ -448,7 +406,7 @@ public:
 	/*
 		Get total file size of single palette data (w/out header)
 	*/
-	[[nodiscard]] std::uint32_t GetPaletteSingleSize(void) const { return GetPaletteColorMax() * sizeof(Sony_Texture_16bpp); }
+	[[nodiscard]] std::uint32_t GetPaletteSingleSize(void) const { return GetPaletteColorMax() * sizeof(Sony_Pixel_16bpp); }
 
 	/*
 		Get total file size of all palette data (w/out header)
@@ -463,7 +421,7 @@ public:
 	/*
 		Get palette data VRAM X coordinate
 	*/
-	std::uint16_t GetPaletteX(void) const { return m_PaletteHeader.X; }
+	[[nodiscard]] std::uint16_t GetPaletteX(void) const { return m_PaletteHeader.X; }
 
 	/*
 		Set palette data VRAM X coordinate
@@ -517,19 +475,19 @@ public:
 		Create grayscale palette
 		- 16 colors (4bpp) or 256 colors (8bpp/16bpp/24bpp)
 	*/
-	[[nodiscard]] std::vector<Sony_Texture_16bpp> GrayScalePalette(std::uint16_t nColors);
+	[[nodiscard]] std::vector<Sony_Pixel_16bpp> GrayScalePalette(std::uint16_t nColors);
 
 	/*
 		Convert unsigned char vector source to palette data
 		- if source is empty, return is single superblack (0,0,0,0) palette
 	*/
-	[[nodiscard]] std::vector<Sony_Texture_16bpp> PaletteFromUChar(std::vector<std::uint8_t> Source) const;
+	[[nodiscard]] std::vector<Sony_Pixel_16bpp> PaletteFromUChar(std::vector<std::uint8_t> Source) const;
 
 	/*
 		Convert palette data source to unsigned char vector
 		- if source is empty, return is single superblack (0,0,0,0) palette-size chunk
 	*/
-	[[nodiscard]] std::vector<std::uint8_t> UCharFromPalette(std::vector<Sony_Texture_16bpp> Source) const;
+	[[nodiscard]] std::vector<std::uint8_t> UCharFromPalette(std::vector<Sony_Pixel_16bpp> Source) const;
 
 	/*
 		Parse conversion of source palette data
@@ -537,19 +495,19 @@ public:
 		 - accepted values for nColorSource and nColorOut: 16 or 256
 		 - empty palette on return if nColor is invalid
 	*/
-	[[nodiscard]] std::vector<Sony_Texture_16bpp> ConvertPalette(std::vector<Sony_Texture_16bpp> Source, std::uint16_t nColorSource, std::uint16_t nColorOut) const;
+	[[nodiscard]] std::vector<Sony_Pixel_16bpp> ConvertPalette(std::vector<Sony_Pixel_16bpp> Source, std::uint16_t nColorSource, std::uint16_t nColorOut) const;
 
 	/*
 		Copy palette at the specified index
 		- return value: true (data was copied), false (no change)
 	*/
-	bool CopyPalette(std::vector<Sony_Texture_16bpp>& Out, std::uint16_t iPalette) const;
+	bool CopyPalette(std::vector<Sony_Pixel_16bpp>& Out, std::uint16_t iPalette) const;
 
 	/*
 		Paste palette to the specified index
 		- return value: true (data was pasted), false (no change)
 	*/
-	bool PastePalette(std::vector<Sony_Texture_16bpp> Out, std::uint16_t iPalette);
+	bool PastePalette(std::vector<Sony_Pixel_16bpp> Out, std::uint16_t iPalette);
 
 	/*
 		Rearrange the palette vector
@@ -564,7 +522,7 @@ public:
 		- if palette width is not divisible by 16 (4bpp) or 256 (8bpp/16bpp/24bpp):
 		  additional palettes may be added as superblack (0,0,0,0) padding where needed
 	*/
-	void AddPalette(std::vector<Sony_Texture_16bpp> Source = {});
+	void AddPalette(std::vector<Sony_Pixel_16bpp> Source = {});
 
 	/*
 		Insert palette at the specified index
@@ -573,7 +531,7 @@ public:
 		- if palette width is not divisible by 16 (4bpp) or 256 (8bpp/16bpp/24bpp):
 		  additional palettes may be added as superblack (0,0,0,0) padding where needed
 	*/
-	void InsertPalette(std::uint16_t iPalette, std::vector<Sony_Texture_16bpp> Source = {});
+	void InsertPalette(std::uint16_t iPalette, std::vector<Sony_Pixel_16bpp> Source = {});
 
 	/*
 		Delete palette at the specified index
@@ -674,120 +632,100 @@ public:
 	void SetHeight(std::uint16_t Height);
 
 	/*
-		Get 8-bit red color from 16-bit color
+		Create 16-bit color from 8-bit RGB
 	*/
-	[[nodiscard]] std::uint8_t GetRed(Sony_Texture_16bpp Color) { return ((Color.R << 3) | (Color.R >> 2)); }
-
-	/*
-		Get 8-bit green color from 16-bit color
-	*/
-	[[nodiscard]] std::uint8_t GetGreen(Sony_Texture_16bpp Color) { return ((Color.G << 3) | (Color.G >> 2)); }
-
-	/*
-		Get 8-bit blue color from 16-bit color
-	*/
-	[[nodiscard]] std::uint8_t GetBlue(Sony_Texture_16bpp Color) { return ((Color.B << 3) | (Color.B >> 2)); }
-
-	/*
-		Get Semi-Transparency Processing Flag from 16-bit color
-	*/
-	[[nodiscard]] bool GetSTP(Sony_Texture_16bpp Color) { return Color.STP; }
+	[[nodiscard]] Sony_Pixel_16bpp Create16bpp(std::uint8_t R, std::uint8_t G, std::uint8_t B, bool STP) { return Sony_Pixel_16bpp{ (uint16_t)(R >> 3), (uint16_t)(G >> 3), (uint16_t)(B >> 3), STP }; }
 
 	/*
 		Create 16-bit color from 8-bit RGB
 	*/
-	[[nodiscard]] Sony_Texture_16bpp Create16bpp(std::uint8_t R, std::uint8_t G, std::uint8_t B, bool STP) { return { (uint16_t)(R >> 3), (uint16_t)(G >> 3), (uint16_t)(B >> 3), STP }; }
-
-	/*
-		Create 16-bit color from 8-bit RGB
-	*/
-	[[nodiscard]] Sony_Texture_16bpp Create16bpp(DWORD Color, bool STP) { return { (uint16_t)((Color & 0xFF) >> 3), (uint16_t)(((Color >> 8) & 0xFF) >> 3), (uint16_t)(((Color >> 16) & 0xFF) >> 3), STP }; }
+	[[nodiscard]] Sony_Pixel_16bpp Create16bpp(DWORD Color, bool STP) { return Sony_Pixel_16bpp{ (uint16_t)((Color & 0xFF) >> 3), (uint16_t)(((Color >> 8) & 0xFF) >> 3), (uint16_t)(((Color >> 16) & 0xFF) >> 3), STP }; }
 
 	/*
 		Create 24-bit pixel data from 8-bit RGB
 	*/
-	[[nodiscard]] Sony_Texture_24bpp Create24bpp(std::uint8_t R0, std::uint8_t G0, std::uint8_t B0, std::uint8_t R1, std::uint8_t G1, std::uint8_t B1) { return { R0, G0, B0, R1, G1, B1 }; }
+	[[nodiscard]] Sony_Pixel_24bpp Create24bpp(std::uint8_t Red, std::uint8_t Green, std::uint8_t Blue) { return Sony_Pixel_24bpp{ Red, Green, Blue }; }
 
 	/*
 		Get 16-bit palette color
 		- if palette is empty, return is superblack (0,0,0,0) color
 	*/
-	[[nodiscard]] Sony_Texture_16bpp GetPaletteColor(std::uint16_t iPalette, std::uint16_t iColor) { return !GetPaletteCount() ? Sony_Texture_16bpp{ 0, 0, 0, false } : m_Palette[(size_t)GetPalettePtr(iPalette) + iColor]; }
+	[[nodiscard]] Sony_Pixel_16bpp GetPaletteColor(std::uint16_t iPalette, std::uint16_t iColor) { return !GetPaletteCount() ? Sony_Pixel_16bpp{ 0, 0, 0, false } : m_Palette[(size_t)GetPalettePtr(iPalette) + iColor]; }
 
 	/*
 		Set 16-bit palette color
 	*/
-	void SetPaletteColor(std::uint16_t iPalette, std::uint16_t iColor, Sony_Texture_16bpp Color) { if (GetPaletteCount()) { m_Palette[(size_t)GetPalettePtr(iPalette) + iColor] = Color; } }
+	void SetPaletteColor(std::uint16_t iPalette, std::uint16_t iColor, Sony_Pixel_16bpp Color) { if (GetPaletteCount()) { m_Palette[(size_t)GetPalettePtr(iPalette) + iColor] = Color; } }
 
 	/*
 		Set 4-bit pixel data
 	*/
-	void SetPixel(size_t X, size_t Y, Sony_Texture_4bpp Color) { std::memcpy(&m_Pixels[(Y * (GetWidth() / 2)) + (X / 2)], &Color, sizeof(Sony_Texture_4bpp)); }
+	void SetPixel(size_t X, size_t Y, Sony_Pixel_4bpp Color) { std::memcpy(&m_Pixels[(Y * (GetWidth() / 2)) + (X / 2)], &Color, sizeof(Sony_Pixel_4bpp)); }
 
 	/*
 		Set 8-bit pixel data
 	*/
-	void SetPixel(size_t X, size_t Y, Sony_Texture_8bpp Color) { std::memcpy(&m_Pixels[((Y * GetWidth()) + X)], &Color, sizeof(Sony_Texture_8bpp)); }
+	void SetPixel(size_t X, size_t Y, Sony_Pixel_8bpp Color) { std::memcpy(&m_Pixels[((Y * GetWidth()) + X)], &Color, sizeof(Sony_Pixel_8bpp)); }
 
 	/*
 		Set 16-bit pixel data
 	*/
-	void SetPixel(size_t X, size_t Y, Sony_Texture_16bpp Color) { std::memcpy(&m_Pixels[(Y * GetWidth() + X) * sizeof(Sony_Texture_16bpp)], &Color, sizeof(Sony_Texture_16bpp)); }
+	void SetPixel(size_t X, size_t Y, Sony_Pixel_16bpp Color) { std::memcpy(&m_Pixels[(Y * GetWidth() + X) * sizeof(Sony_Pixel_16bpp)], &Color, sizeof(Sony_Pixel_16bpp)); }
 
 	/*
 		Set 24-bit pixel data
 	*/
-	void SetPixel(size_t X, size_t Y, Sony_Texture_24bpp Color) { std::memcpy(&m_Pixels[(Y * (((size_t)GetWidth() * 24 + 7) / 8)) + (X * (24 / 8))], &Color, sizeof(Sony_Texture_24bpp)); }
+	void SetPixel(size_t X, size_t Y, Sony_Pixel_24bpp Color) { std::memcpy(&m_Pixels[(Y * (((size_t)GetWidth() * 24 + 7) / 8)) + (X * (24 / 8))], &Color, sizeof(Sony_Pixel_24bpp)); }
 
 	/*
 		Get 4-bit pixel data
 	*/
-	[[nodiscard]] Sony_Texture_4bpp Get4bpp(std::size_t iPixel) { return iPixel + sizeof(Sony_Texture_4bpp) <= m_Pixels.size() ? *reinterpret_cast<Sony_Texture_4bpp*>(&m_Pixels[iPixel]) : Sony_Texture_4bpp { 0, 0, 0, 0 }; }
+	[[nodiscard]] Sony_Pixel_4bpp Get4bpp(std::size_t iPixel) { return iPixel + sizeof(Sony_Pixel_4bpp) <= m_Pixels.size() ? *reinterpret_cast<Sony_Pixel_4bpp*>(&m_Pixels[iPixel]) : Sony_Pixel_4bpp{ 0, 0 }; }
 
 	/*
 		Get 4-bit pixel data
 	*/
-	[[nodiscard]] Sony_Texture_4bpp Get4bpp(std::size_t X, std::size_t Y) { return *reinterpret_cast<Sony_Texture_4bpp*>(&m_Pixels[(Y * (GetWidth() / 2)) + (X / 2)]); }
+	[[nodiscard]] Sony_Pixel_4bpp Get4bpp(std::size_t X, std::size_t Y) { return *reinterpret_cast<Sony_Pixel_4bpp*>(&m_Pixels[(Y * (GetWidth() / 2)) + (X / 2)]); }
 
 	/*
 		Get 16-bit palette color from 4-bit pixel data
 	*/
-	[[nodiscard]] Sony_Texture_16bpp Get4bppColor(std::size_t X, std::size_t Y, std::uint16_t iPalette) { return GetPaletteColor(iPalette, Get4bpp(X, Y).Pix0); }
+	[[nodiscard]] Sony_Pixel_16bpp Get4bppColor(std::size_t X, std::size_t Y, std::uint16_t iPalette) { return GetPaletteColor(iPalette, Get4bpp(X, Y).Pix0); }
 
 	/*
 		Get 8-bit pixel data
 	*/
-	[[nodiscard]] Sony_Texture_8bpp Get8bpp(std::size_t iPixel) { return iPixel + sizeof(Sony_Texture_8bpp) <= m_Pixels.size() ? *reinterpret_cast<Sony_Texture_8bpp*>(&m_Pixels[iPixel]) : Sony_Texture_8bpp { 0, 0 }; }
+	[[nodiscard]] Sony_Pixel_8bpp Get8bpp(std::size_t iPixel) { return iPixel + sizeof(Sony_Pixel_8bpp) <= m_Pixels.size() ? *reinterpret_cast<Sony_Pixel_8bpp*>(&m_Pixels[iPixel]) : Sony_Pixel_8bpp{ 0 }; }
 
 	/*
 		Get 8-bit pixel data
 	*/
-	[[nodiscard]] Sony_Texture_8bpp Get8bpp(std::size_t X, std::size_t Y) { return *reinterpret_cast<Sony_Texture_8bpp*>(&m_Pixels[((Y * GetWidth()) + X)]); }
+	[[nodiscard]] Sony_Pixel_8bpp Get8bpp(std::size_t X, std::size_t Y) { return *reinterpret_cast<Sony_Pixel_8bpp*>(&m_Pixels[((Y * GetWidth()) + X)]); }
 
 	/*
 		Get 16-bit palette color from 8-bit pixel data
 	*/
-	[[nodiscard]] Sony_Texture_16bpp Get8bppColor(std::size_t X, std::size_t Y, std::uint16_t iPalette) { return GetPaletteColor(iPalette, Get8bpp(X, Y).Pix0); }
+	[[nodiscard]] Sony_Pixel_16bpp Get8bppColor(std::size_t X, std::size_t Y, std::uint16_t iPalette) { return GetPaletteColor(iPalette, Get8bpp(X, Y).Pixel); }
 
 	/*
 		Get 16-bit color from pixel data
 	*/
-	[[nodiscard]] Sony_Texture_16bpp Get16bpp(std::size_t iPixel) { return iPixel + sizeof(Sony_Texture_16bpp) <= m_Pixels.size() ? *reinterpret_cast<Sony_Texture_16bpp*>(&m_Pixels[iPixel]) : Sony_Texture_16bpp { 0, 0, 0, false }; }
+	[[nodiscard]] Sony_Pixel_16bpp Get16bpp(std::size_t iPixel) { return iPixel + sizeof(Sony_Pixel_16bpp) <= m_Pixels.size() ? *reinterpret_cast<Sony_Pixel_16bpp*>(&m_Pixels[iPixel]) : Sony_Pixel_16bpp{ 0, 0, 0, false }; }
 
 	/*
 		Get 16-bit color from pixel data
 	*/
-	[[nodiscard]] Sony_Texture_16bpp Get16bpp(std::size_t X, std::size_t Y) { return *reinterpret_cast<Sony_Texture_16bpp*>(&m_Pixels[(Y * GetWidth() + X) * sizeof(Sony_Texture_16bpp)]); }
+	[[nodiscard]] Sony_Pixel_16bpp Get16bpp(std::size_t X, std::size_t Y) { return *reinterpret_cast<Sony_Pixel_16bpp*>(&m_Pixels[(Y * GetWidth() + X) * sizeof(Sony_Pixel_16bpp)]); }
 
 	/*
 		Get 24-bit colors from pixel data
 	*/
-	[[nodiscard]] Sony_Texture_24bpp Get24bpp(std::size_t iPixel) { return iPixel + sizeof(Sony_Texture_24bpp) <= m_Pixels.size() ? *reinterpret_cast<Sony_Texture_24bpp*>(&m_Pixels[iPixel]) : Sony_Texture_24bpp{ 0, 0, 0, 0, 0, 0 }; }
+	[[nodiscard]] Sony_Pixel_24bpp Get24bpp(std::size_t iPixel) { return iPixel + sizeof(Sony_Pixel_24bpp) <= m_Pixels.size() ? *reinterpret_cast<Sony_Pixel_24bpp*>(&m_Pixels[iPixel]) : Sony_Pixel_24bpp{ 0, 0, 0 }; }
 
 	/*
 		Get 24-bit colors from pixel data
 	*/
-	[[nodiscard]] Sony_Texture_24bpp Get24bpp(std::size_t X, std::size_t Y) { return *reinterpret_cast<Sony_Texture_24bpp*>(&m_Pixels[(Y * (((size_t)GetWidth() * 24 + 7) / 8)) + (X * (24 / 8))]); }
+	[[nodiscard]] Sony_Pixel_24bpp Get24bpp(std::size_t X, std::size_t Y) { return *reinterpret_cast<Sony_Pixel_24bpp*>(&m_Pixels[(Y * (((size_t)GetWidth() * 24 + 7) / 8)) + (X * (24 / 8))]); }
 
 	/*
 		Get total Texture Image (*.TIM) file size
@@ -802,7 +740,12 @@ public:
 	/*
 		Read header data from file
 	*/
-	bool ReadData(std::filesystem::path Path, std::uintmax_t pSource, Sony_Texture_Data& OutHeader, std::vector<std::uint8_t>& OutData);
+	bool ReadData(std::filesystem::path Path, std::uintmax_t pSource, Sony_Texture_Data& OutHeader, std::vector<std::uint8_t>& OutData)
+	{
+		StdFile m_File;
+		m_File.SetPath(Path);
+		return ReadData(m_File, pSource, OutHeader, OutData);
+	}
 
 	/*
 		Write header data to file
@@ -812,7 +755,12 @@ public:
 	/*
 		Write header data to file
 	*/
-	bool WriteData(std::filesystem::path Path, std::uintmax_t pSource, Sony_Texture_Data OutHeader, std::vector<std::uint8_t> OutData);
+	bool WriteData(std::filesystem::path Path, std::uintmax_t pSource, Sony_Texture_Data OutHeader, std::vector<std::uint8_t> OutData)
+	{
+		StdFile m_File;
+		m_File.SetPath(Path);
+		return WriteData(m_File, pSource, OutHeader, OutData);
+	}
 
 	/*
 		Import raw palette data from file
@@ -828,7 +776,12 @@ public:
 		- if b_Paste is true, single palette data is pasted to the specified index
 		  otherwise, the current palette is completely replaced with new data
 	*/
-	bool ReadPalette(std::filesystem::path Path, std::uintmax_t pSource, std::uint16_t nPalette, bool b_Add = false, bool b_Paste = false, std::uint16_t iPalette = 0);
+	bool ReadPalette(std::filesystem::path Path, std::uintmax_t pSource, std::uint16_t nPalette, bool b_Add = false, bool b_Paste = false, std::uint16_t iPalette = 0)
+	{
+		StdFile m_File;
+		m_File.SetPath(Path);
+		return ReadPalette(m_File, pSource, nPalette, b_Add, b_Paste, iPalette);
+	}
 
 	/*
 		Import raw pixel data from file
@@ -838,7 +791,12 @@ public:
 	/*
 		Import raw pixel data from file
 	*/
-	bool ReadPixels(std::filesystem::path Path, std::uintmax_t pSource, std::uint16_t Width, std::uint16_t Height);
+	bool ReadPixels(std::filesystem::path Path, std::uintmax_t pSource, std::uint16_t Width, std::uint16_t Height)
+	{
+		StdFile m_File;
+		m_File.SetPath(Path);
+		return ReadPixels(m_File, pSource, Width, Height);
+	}
 
 	/*
 		Export raw palette data to file
@@ -850,7 +808,21 @@ public:
 		Export raw palette data to file
 		- if b_WriteAll is true, iPalette is ignored and all palettes are written to the file
 	*/
-	bool WritePalette(std::filesystem::path Path, std::uintmax_t pSource, std::uint16_t iPalette = 0, bool b_WriteAll = true, bool b_Truncate = true);
+	bool WritePalette(std::filesystem::path Path, std::uintmax_t pSource, std::uint16_t iPalette = 0, bool b_WriteAll = true, bool b_Truncate = true)
+	{
+		StdFile m_File;
+
+		if (b_Truncate)
+		{
+			m_File.Open(Path, FileAccessMode::Write_Ex, true, true);
+		}
+		else
+		{
+			m_File.Open(Path, FileAccessMode::Read_Ex, true, false);
+		}
+
+		return WritePalette(m_File, pSource, iPalette, b_WriteAll);
+	}
 
 	/*
 		Write raw pixel data to file
@@ -861,7 +833,21 @@ public:
 		Write raw pixel data to file
 		- if b_Truncate is true, the file is truncated to the total size of the pixel data
 	*/
-	bool WritePixels(std::filesystem::path Path, std::uintmax_t pSource, bool b_Truncate = true);
+	bool WritePixels(std::filesystem::path Path, std::uintmax_t pSource, bool b_Truncate = true)
+	{
+		StdFile m_File;
+
+		if (b_Truncate)
+		{
+			m_File.Open(Path, FileAccessMode::Write_Ex, true, true);
+		}
+		else
+		{
+			m_File.Open(Path, FileAccessMode::Read_Ex, true, false);
+		}
+
+		return WritePixels(m_File, pSource);
+	}
 
 	/*
 		Import pixel data from Texture Image (*.TIM) file
@@ -882,7 +868,12 @@ public:
 		- if b_Add is true, the palette data is appended to the current palette data
 		  otherwise, the current palette is completely replaced with new data
 	*/
-	bool ReadPaletteTIM(std::filesystem::path Path, std::uintmax_t pSource = 0, bool b_Add = false);
+	bool ReadPaletteTIM(std::filesystem::path Path, std::uintmax_t pSource = 0, bool b_Add = false)
+	{
+		StdFile m_File;
+		m_File.SetPath(Path);
+		return ReadPaletteTIM(m_File, pSource, b_Add);
+	}
 
 	/*
 		Import pixel data from Texture Image (*.TIM) file
@@ -897,7 +888,12 @@ public:
 	/*
 		Import pixel data from Texture Image (*.TIM) file
 	*/
-	bool ReadPixelsTIM(std::filesystem::path Path, std::uintmax_t pSource = 0);
+	bool ReadPixelsTIM(std::filesystem::path Path, std::uintmax_t pSource = 0)
+	{
+		StdFile m_File;
+		m_File.SetPath(Path);
+		return ReadPixelsTIM(m_File, pSource);
+	}
 
 	/*
 		Export palette data to Texture Image (*.TIM) file
@@ -909,7 +905,12 @@ public:
 		Export palette data to Texture Image (*.TIM) file
 		- if b_WriteAll is true, iPalette is ignored and all palettes are written to the file
 	*/
-	bool WritePaletteTIM(std::filesystem::path Path, std::uintmax_t pSource = 0, std::uint16_t iPalette = 0, bool b_WriteAll = true);
+	bool WritePaletteTIM(std::filesystem::path Path, std::uintmax_t pSource = 0, std::uint16_t iPalette = 0, bool b_WriteAll = true)
+	{
+		StdFile m_File;
+		m_File.SetPath(Path);
+		return WritePaletteTIM(m_File, pSource, iPalette, b_WriteAll);
+	}
 
 	/*
 		Export pixel data to Texture Image (*.TIM) file
@@ -919,7 +920,12 @@ public:
 	/*
 		Export pixel data to Texture Image (*.TIM) file
 	*/
-	bool WritePixelsTIM(std::filesystem::path Path, std::uintmax_t pSource = 0);
+	bool WritePixelsTIM(std::filesystem::path Path, std::uintmax_t pSource = 0)
+	{
+		StdFile m_File;
+		m_File.SetPath(Path);
+		return WritePixelsTIM(m_File, pSource);
+	}
 
 	/*
 		Import (replace) Texture Image (*.TIM) file
@@ -940,7 +946,12 @@ public:
 	/*
 		Open Texture Image (*.TIM) file
 	*/
-	bool OpenTIM(std::filesystem::path Path, std::uintmax_t pSource = 0, bool b_ReadPalette = true, bool b_ReadPixels = true);
+	bool OpenTIM(std::filesystem::path Path, std::uintmax_t pSource = 0, bool b_ReadPalette = true, bool b_ReadPixels = true)
+	{
+		StdFile m_File;
+		m_File.SetPath(Path);
+		return OpenTIM(m_File, pSource, b_ReadPalette, b_ReadPixels);
+	}
 
 	/*
 		Open Texture Image CLUT (*.CLT) file
@@ -954,7 +965,12 @@ public:
 		- if b_Add is true, the palette data is appended to the current palette data
 		  otherwise, the current palette is completely replaced with new data
 	*/
-	bool OpenCLT(std::filesystem::path Path, std::uintmax_t pSource = 0, bool b_Add = false);
+	bool OpenCLT(std::filesystem::path Path, std::uintmax_t pSource = 0, bool b_Add = false)
+	{
+		StdFile m_File;
+		m_File.SetPath(Path);
+		return OpenCLT(m_File, pSource, b_Add);
+	}
 
 	/*
 		Open Texture Image pixel (*.PXL) file
@@ -964,7 +980,12 @@ public:
 	/*
 		Open Texture Image pixel (*.PXL) file
 	*/
-	bool OpenPXL(std::filesystem::path Path, std::uintmax_t pSource = 0);
+	bool OpenPXL(std::filesystem::path Path, std::uintmax_t pSource = 0)
+	{
+		StdFile m_File;
+		m_File.SetPath(Path);
+		return OpenPXL(m_File, pSource);
+	}
 
 	/*
 		Open Bitstream (*.BS) file
@@ -974,7 +995,12 @@ public:
 	/*
 		Open Bitstream (*.BS) file
 	*/
-	bool OpenBS(std::filesystem::path Path, std::uintmax_t pSource, std::uint16_t Width, std::uint16_t Height);
+	bool OpenBS(std::filesystem::path Path, std::uintmax_t pSource, std::uint16_t Width, std::uint16_t Height)
+	{
+		StdFile m_File;
+		m_File.SetPath(Path);
+		return OpenBS(m_File, pSource, Width, Height);
+	}
 
 	/*
 		Open Microsoft RIFF Palette (*.PAL) file
@@ -988,7 +1014,12 @@ public:
 		- if b_Add is true, the palette data is appended to the current palette data
 		  otherwise, the current palette is completely replaced with new data
 	*/
-	bool OpenPAL(std::filesystem::path Path, std::uintmax_t pSource = 0, bool b_Add = false);
+	bool OpenPAL(std::filesystem::path Path, std::uintmax_t pSource = 0, bool b_Add = false)
+	{
+		StdFile m_File;
+		m_File.SetPath(Path);
+		return OpenPAL(m_File, pSource, b_Add);
+	}
 
 	/*
 		Save Texture Image (*.TIM) file
@@ -1005,7 +1036,21 @@ public:
 		- if b_Truncate is true, the file is truncated to the total size of the TIM data
 		- if neither b_WritePalette nor b_WritePixels is true, operation is aborted
 	*/
-	bool SaveTIM(std::filesystem::path Path, std::uintmax_t pSource = 0, bool b_WritePalette = true, bool b_WritePixels = true, bool b_Truncate = true);
+	bool SaveTIM(std::filesystem::path Path, std::uintmax_t pSource = 0, bool b_WritePalette = true, bool b_WritePixels = true, bool b_Truncate = true)
+	{
+		StdFile m_File;
+
+		if (b_Truncate)
+		{
+			m_File.Open(Path, FileAccessMode::Write_Ex, true, true);
+		}
+		else
+		{
+			m_File.Open(Path, FileAccessMode::Read_Ex, true, false);
+		}
+
+		return SaveTIM(m_File, pSource, b_WritePalette, b_WritePixels);
+	}
 
 	/*
 		Save Texture Image CLUT (*.CLT) file
@@ -1016,7 +1061,21 @@ public:
 		Save Texture Image CLUT (*.CLT) file
 		- if b_Truncate is true, the file is truncated to the total size of the CLT data
 	*/
-	bool SaveCLT(std::filesystem::path Path, std::uintmax_t pSource = 0, bool b_Truncate = true);
+	bool SaveCLT(std::filesystem::path Path, std::uintmax_t pSource = 0, bool b_Truncate = true)
+	{
+		StdFile m_File;
+
+		if (b_Truncate)
+		{
+			m_File.Open(Path, FileAccessMode::Write_Ex, true, true);
+		}
+		else
+		{
+			m_File.Open(Path, FileAccessMode::Read_Ex, true, false);
+		}
+
+		return SaveCLT(m_File, pSource);
+	}
 
 	/*
 		Save Texture Image pixel (*.PXL) file
@@ -1027,7 +1086,21 @@ public:
 		Save Texture Image pixel (*.PXL) file
 		- if b_Truncate is true, the file is truncated to the total size of the PXL data
 	*/
-	bool SavePXL(std::filesystem::path Path, std::uintmax_t pSource = 0, bool b_Truncate = true);
+	bool SavePXL(std::filesystem::path Path, std::uintmax_t pSource = 0, bool b_Truncate = true)
+	{
+		StdFile m_File;
+
+		if (b_Truncate)
+		{
+			m_File.Open(Path, FileAccessMode::Write_Ex, true, true);
+		}
+		else
+		{
+			m_File.Open(Path, FileAccessMode::Read_Ex, true, false);
+		}
+
+		return SavePXL(m_File, pSource);
+	}
 
 	/*
 		Save Microsoft RIFF Palette (*.PAL) file
@@ -1038,7 +1111,21 @@ public:
 		Save Microsoft RIFF Palette (*.PAL) file
 		- if b_Truncate is true, the file is truncated to the total size of the CLT data
 	*/
-	bool SavePAL(std::filesystem::path Path, std::uintmax_t pSource = 0, bool b_Truncate = true);
+	bool SavePAL(std::filesystem::path Path, std::uintmax_t pSource = 0, bool b_Truncate = true)
+	{
+		StdFile m_File;
+
+		if (b_Truncate)
+		{
+			m_File.Open(Path, FileAccessMode::Write_Ex, true, true);
+		}
+		else
+		{
+			m_File.Open(Path, FileAccessMode::Read_Ex, true, false);
+		}
+
+		return SavePAL(m_File, pSource);
+	}
 
 	/*
 		Create Texture Image (*.TIM) file
@@ -1068,7 +1155,12 @@ public:
 		- OnComplete: file name and vector of pairs (file pointer, total file size)
 	*/
 	void Search(std::filesystem::path Path, std::uintmax_t pSource,
-		std::function<void(float, bool&)> ProgressCallback, std::function<void(std::filesystem::path, std::vector<std::pair<std::uintmax_t, std::uintmax_t>>&)> OnComplete);
+		std::function<void(float, bool&)> ProgressCallback, std::function<void(std::filesystem::path, std::vector<std::pair<std::uintmax_t, std::uintmax_t>>&)> OnComplete)
+	{
+		StdFile m_File;
+		m_File.SetPath(Path);
+		Search(m_File, pSource, ProgressCallback, OnComplete);
+	}
 
 	/*
 		Update Standard Image Palette
@@ -1093,7 +1185,19 @@ public:
 	/*
 		Open Bitmap Graphic (*.BMP) file
 	*/
-	bool OpenBMP(std::filesystem::path Path, std::uintmax_t pSource = 0);
+	bool OpenBMP(std::filesystem::path Path, std::uintmax_t pSource = 0)
+	{
+		std::unique_ptr<Standard_Image> Input = std::make_unique<Standard_Image>();
+
+		Input->Str.hWnd = Str.hWnd;
+
+		if (!Input->OpenBMP(Path, pSource))
+		{
+			return false;
+		}
+
+		return ImportImage(Input);
+	}
 
 #ifdef LIB_PNG
 	/*
@@ -1104,19 +1208,59 @@ public:
 	/*
 		Open Portable Network Graphics (*.PNG) file
 	*/
-	bool OpenPNG(std::filesystem::path Path, std::uintmax_t pSource = 0);
+	bool OpenPNG(std::filesystem::path Path, std::uintmax_t pSource = 0)
+	{
+		std::unique_ptr<Standard_Image> Input = std::make_unique<Standard_Image>();
+
+		Input->Str.hWnd = Str.hWnd;
+
+		if (!Input->OpenPNG(Path, pSource))
+		{
+			return false;
+		}
+
+		return ImportImage(Input);
+	}
 #endif
 
 #ifdef LIB_JPEG
 	/*
 		Save Joint Photographic Experts Group (*.JPG) file
 	*/
-	bool SaveJPG(std::filesystem::path Filename, std::uintmax_t pSource = 0, std::uint16_t iPalette = 0, bool b_Truncate = true) { return ExportImage(iPalette)->SaveJPG(Filename, pSource, b_Truncate); }
+	bool SaveJPEG(std::filesystem::path Filename, std::uintmax_t pSource = 0, std::uint16_t iPalette = 0, bool b_Truncate = true) { return ExportImage(iPalette)->SaveJPG(Filename, pSource, b_Truncate); }
 
 	/*
 		Open Joint Photographic Experts Group (*.JPG) file
 	*/
-	bool OpenJPG(std::filesystem::path Path, std::uintmax_t pSource = 0);
+	bool OpenJPEG(std::filesystem::path Path, std::uintmax_t pSource = 0)
+	{
+		std::unique_ptr<Standard_Image> Input = std::make_unique<Standard_Image>();
+
+		Input->Str.hWnd = Str.hWnd;
+
+		if (!Input->OpenJPEG(Path, pSource))
+		{
+			return false;
+		}
+
+		return ImportImage(Input);
+	}
 #endif
+
+	bool OpenTIM2(std::filesystem::path Path, std::uintmax_t pSource = 0, bool b_ReadPalette = true, bool b_ReadPixels = true)
+	{
+		std::unique_ptr<Sony_PlayStation_Texture_2> TIM2 = std::make_unique<Sony_PlayStation_Texture_2>();
+
+		TIM2->Str.hWnd = Str.hWnd;
+
+		if (!TIM2->OpenTIM2(Path, pSource, b_ReadPalette, b_ReadPixels))
+		{
+			return false;
+		}
+
+		std::unique_ptr<Standard_Image> Image = TIM2->ExportImage();
+
+		return ImportImage(Image);
+	}
 
 };

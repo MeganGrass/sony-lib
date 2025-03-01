@@ -192,7 +192,7 @@ std::uint32_t Sony_PlayStation_Texture::GetPalettePtr(std::uint16_t iPalette) co
 	return (y * GetPaletteWidth() + x);
 }
 
-std::vector<Sony_Texture_16bpp> Sony_PlayStation_Texture::GrayScalePalette(std::uint16_t Depth)
+std::vector<Sony_Pixel_16bpp> Sony_PlayStation_Texture::GrayScalePalette(std::uint16_t Depth)
 {
 	std::uint16_t nColors = 256;
 
@@ -201,7 +201,7 @@ std::vector<Sony_Texture_16bpp> Sony_PlayStation_Texture::GrayScalePalette(std::
 		nColors = 16;
 	}
 
-	std::vector<Sony_Texture_16bpp> ExPalette(nColors);
+	std::vector<Sony_Pixel_16bpp> ExPalette(nColors);
 
 	if (Depth == 4)
 	{
@@ -221,9 +221,9 @@ std::vector<Sony_Texture_16bpp> Sony_PlayStation_Texture::GrayScalePalette(std::
 	return ExPalette;
 }
 
-std::vector<Sony_Texture_16bpp> Sony_PlayStation_Texture::PaletteFromUChar(std::vector<std::uint8_t> Source) const
+std::vector<Sony_Pixel_16bpp> Sony_PlayStation_Texture::PaletteFromUChar(std::vector<std::uint8_t> Source) const
 {
-	if (Source.empty()) { return std::vector<Sony_Texture_16bpp>(GetPaletteColorMax()); }
+	if (Source.empty()) { return std::vector<Sony_Pixel_16bpp>(GetPaletteColorMax()); }
 
 	std::uint16_t PaletteSize = GetPaletteSingleSize();
 	std::uint32_t PaletteSizeMax = PaletteSize * GetPaletteCountMax();
@@ -238,22 +238,22 @@ std::vector<Sony_Texture_16bpp> Sony_PlayStation_Texture::PaletteFromUChar(std::
 		Source.resize(Source.size() + (PaletteSize - (Source.size() % PaletteSize)));
 	}
 
-	std::vector<Sony_Texture_16bpp> ExPalette((Source.size() / PaletteSize) * GetPaletteColorMax());
+	std::vector<Sony_Pixel_16bpp> ExPalette((Source.size() / PaletteSize) * GetPaletteColorMax());
 
-	for (std::size_t i = 0; i < (Source.size() / sizeof(Sony_Texture_16bpp)); ++i)
+	for (std::size_t i = 0; i < (Source.size() / sizeof(Sony_Pixel_16bpp)); ++i)
 	{
-		std::size_t pSource = i * sizeof(Sony_Texture_16bpp);
+		std::size_t pSource = i * sizeof(Sony_Pixel_16bpp);
 
-		if (pSource + sizeof(Sony_Texture_16bpp) <= Source.size())
+		if (pSource + sizeof(Sony_Pixel_16bpp) <= Source.size())
 		{
-			std::memcpy(&ExPalette[i], &Source[pSource], sizeof(Sony_Texture_16bpp));
+			std::memcpy(&ExPalette[i], &Source[pSource], sizeof(Sony_Pixel_16bpp));
 		}
 	}
 
 	return ExPalette;
 }
 
-std::vector<std::uint8_t> Sony_PlayStation_Texture::UCharFromPalette(std::vector<Sony_Texture_16bpp> Source) const
+std::vector<std::uint8_t> Sony_PlayStation_Texture::UCharFromPalette(std::vector<Sony_Pixel_16bpp> Source) const
 {
 	if (Source.empty()) { return std::vector<std::uint8_t>(GetPaletteSingleSize()); }
 
@@ -267,26 +267,26 @@ std::vector<std::uint8_t> Sony_PlayStation_Texture::UCharFromPalette(std::vector
 		Source.resize(Source.size() + (GetPaletteColorMax() - (Source.size() % GetPaletteColorMax())));
 	}
 
-	std::vector<std::uint8_t> ExPalette(Source.size() * sizeof(Sony_Texture_16bpp));
+	std::vector<std::uint8_t> ExPalette(Source.size() * sizeof(Sony_Pixel_16bpp));
 
 	for (std::size_t i = 0; i < Source.size(); ++i)
 	{
-		std::size_t pSource = i * sizeof(Sony_Texture_16bpp);
+		std::size_t pSource = i * sizeof(Sony_Pixel_16bpp);
 
-		if (pSource + sizeof(Sony_Texture_16bpp) <= ExPalette.size())
+		if (pSource + sizeof(Sony_Pixel_16bpp) <= ExPalette.size())
 		{
-			std::memcpy(&ExPalette[pSource], &Source[i], sizeof(Sony_Texture_16bpp));
+			std::memcpy(&ExPalette[pSource], &Source[i], sizeof(Sony_Pixel_16bpp));
 		}
 	}
 
 	return ExPalette;
 }
 
-std::vector<Sony_Texture_16bpp> Sony_PlayStation_Texture::ConvertPalette(std::vector<Sony_Texture_16bpp> Source, std::uint16_t nColorSource, std::uint16_t nColorOut) const
+std::vector<Sony_Pixel_16bpp> Sony_PlayStation_Texture::ConvertPalette(std::vector<Sony_Pixel_16bpp> Source, std::uint16_t nColorSource, std::uint16_t nColorOut) const
 {
 	if ((nColorSource != 16 && nColorSource != 256) || (nColorOut != 16 && nColorOut != 256))
 	{
-		return std::vector<Sony_Texture_16bpp>();
+		return std::vector<Sony_Pixel_16bpp>();
 	}
 
 	if (Source.size() % nColorSource)
@@ -305,7 +305,7 @@ std::vector<Sony_Texture_16bpp> Sony_PlayStation_Texture::ConvertPalette(std::ve
 		nPaletteOut = (Source.size() / nColorOut);
 	}
 
-	std::vector<Sony_Texture_16bpp> ExPalette(nPaletteOut * nColorOut);
+	std::vector<Sony_Pixel_16bpp> ExPalette(nPaletteOut * nColorOut);
 
 	for (std::size_t i = 0; i < nPaletteOut; ++i)
 	{
@@ -324,7 +324,7 @@ std::vector<Sony_Texture_16bpp> Sony_PlayStation_Texture::ConvertPalette(std::ve
 	return ExPalette;
 }
 
-bool Sony_PlayStation_Texture::CopyPalette(std::vector<Sony_Texture_16bpp>& Out, std::uint16_t iPalette) const
+bool Sony_PlayStation_Texture::CopyPalette(std::vector<Sony_Pixel_16bpp>& Out, std::uint16_t iPalette) const
 {
 	Out.clear();
 
@@ -340,7 +340,7 @@ bool Sony_PlayStation_Texture::CopyPalette(std::vector<Sony_Texture_16bpp>& Out,
 	return true;
 }
 
-bool Sony_PlayStation_Texture::PastePalette(std::vector<Sony_Texture_16bpp> Out, std::uint16_t iPalette)
+bool Sony_PlayStation_Texture::PastePalette(std::vector<Sony_Pixel_16bpp> Out, std::uint16_t iPalette)
 {
 	if (!Out.empty())
 	{
@@ -389,7 +389,7 @@ bool Sony_PlayStation_Texture::MovePalette(std::uint16_t iPalette, bool b_MoveRi
 	return false;
 }
 
-void Sony_PlayStation_Texture::AddPalette(std::vector<Sony_Texture_16bpp> Source)
+void Sony_PlayStation_Texture::AddPalette(std::vector<Sony_Pixel_16bpp> Source)
 {
 	if (!GetPaletteCount())
 	{
@@ -412,7 +412,7 @@ void Sony_PlayStation_Texture::AddPalette(std::vector<Sony_Texture_16bpp> Source
 	}
 	else
 	{
-		std::vector<Sony_Texture_16bpp> ExPalette(GetPaletteColorMax());
+		std::vector<Sony_Pixel_16bpp> ExPalette(GetPaletteColorMax());
 
 		m_Palette.insert(m_Palette.end(), ExPalette.begin(), ExPalette.end());
 	}
@@ -424,7 +424,7 @@ void Sony_PlayStation_Texture::AddPalette(std::vector<Sony_Texture_16bpp> Source
 	UpdatePaletteDataSize();
 }
 
-void Sony_PlayStation_Texture::InsertPalette(std::uint16_t iPalette, std::vector<Sony_Texture_16bpp> Source)
+void Sony_PlayStation_Texture::InsertPalette(std::uint16_t iPalette, std::vector<Sony_Pixel_16bpp> Source)
 {
 	if (!GetPaletteCount())
 	{
@@ -444,7 +444,7 @@ void Sony_PlayStation_Texture::InsertPalette(std::uint16_t iPalette, std::vector
 	}
 	else
 	{
-		std::vector<Sony_Texture_16bpp> ExPalette(GetPaletteColorMax());
+		std::vector<Sony_Pixel_16bpp> ExPalette(GetPaletteColorMax());
 
 		m_Palette.insert(m_Palette.begin() + pPalette, ExPalette.begin(), ExPalette.end());
 	}
@@ -469,7 +469,7 @@ bool Sony_PlayStation_Texture::DeletePalette(std::uint16_t iPalette, bool b_All)
 
 		if (GetPaletteWidth() % GetPaletteColorMax())
 		{
-			std::vector<Sony_Texture_16bpp> ExPalette(GetPaletteColorMax());
+			std::vector<Sony_Pixel_16bpp> ExPalette(GetPaletteColorMax());
 
 			std::copy(m_Palette.begin() + pPalette, m_Palette.begin() + pPalette + GetPaletteColorMax(), ExPalette.begin());
 		}
@@ -583,13 +583,6 @@ bool Sony_PlayStation_Texture::ReadData(StdFile& File, std::uintmax_t pSource, S
 	return true;
 }
 
-bool Sony_PlayStation_Texture::ReadData(std::filesystem::path Path, std::uintmax_t pSource, Sony_Texture_Data& OutHeader, std::vector<std::uint8_t>& OutData)
-{
-	StdFile m_File;
-	m_File.SetPath(Path);
-	return ReadData(m_File, pSource, OutHeader, OutData);
-}
-
 bool Sony_PlayStation_Texture::WriteData(StdFile& File, std::uintmax_t pSource, Sony_Texture_Data OutHeader, std::vector<std::uint8_t> OutData)
 {
 	if (!File.IsOpen())
@@ -608,13 +601,6 @@ bool Sony_PlayStation_Texture::WriteData(StdFile& File, std::uintmax_t pSource, 
 	File.Write(pSource + sizeof(Sony_Texture_Data), OutData.data(), OutData.size());
 
 	return true;
-}
-
-bool Sony_PlayStation_Texture::WriteData(std::filesystem::path Path, std::uintmax_t pSource, Sony_Texture_Data OutHeader, std::vector<std::uint8_t> OutData)
-{
-	StdFile m_File;
-	m_File.SetPath(Path);
-	return WriteData(m_File, pSource, OutHeader, OutData);
 }
 
 bool Sony_PlayStation_Texture::ReadPalette(StdFile& File, std::uintmax_t pSource, std::uint16_t nPalette, bool b_Add, bool b_Paste, std::uint16_t iPalette)
@@ -687,7 +673,7 @@ bool Sony_PlayStation_Texture::ReadPalette(StdFile& File, std::uintmax_t pSource
 
 		m_PaletteHeader.Size = (uint32_t)(ExPaletteData.size() + sizeof(Sony_Texture_Data));
 
-		m_Palette.resize(ExPaletteData.size() / sizeof(Sony_Texture_16bpp));
+		m_Palette.resize(ExPaletteData.size() / sizeof(Sony_Pixel_16bpp));
 
 		std::memcpy(m_Palette.data(), ExPaletteData.data(), ExPaletteData.size());
 
@@ -695,13 +681,6 @@ bool Sony_PlayStation_Texture::ReadPalette(StdFile& File, std::uintmax_t pSource
 	}
 
 	return true;
-}
-
-bool Sony_PlayStation_Texture::ReadPalette(std::filesystem::path Path, std::uintmax_t pSource, std::uint16_t nPalette, bool b_Add, bool b_Paste, std::uint16_t iPalette)
-{
-	StdFile m_File;
-	m_File.SetPath(Path);
-	return ReadPalette(m_File, pSource, nPalette, b_Add, b_Paste, iPalette);
 }
 
 bool Sony_PlayStation_Texture::ReadPixels(StdFile& File, std::uintmax_t pSource, std::uint16_t Width, std::uint16_t Height)
@@ -779,13 +758,6 @@ bool Sony_PlayStation_Texture::ReadPixels(StdFile& File, std::uintmax_t pSource,
 	return true;
 }
 
-bool Sony_PlayStation_Texture::ReadPixels(std::filesystem::path Path, std::uintmax_t pSource, std::uint16_t Width, std::uint16_t Height)
-{
-	StdFile m_File;
-	m_File.SetPath(Path);
-	return ReadPixels(m_File, pSource, Width, Height);
-}
-
 bool Sony_PlayStation_Texture::WritePalette(StdFile& File, std::uintmax_t pSource, std::uint16_t iPalette, bool b_WriteAll)
 {
 	if (!GetPaletteSize())
@@ -808,7 +780,7 @@ bool Sony_PlayStation_Texture::WritePalette(StdFile& File, std::uintmax_t pSourc
 
 	if (b_WriteAll)
 	{
-		File.Write(pSource, m_Palette.data(), m_Palette.size() * sizeof(Sony_Texture_16bpp));
+		File.Write(pSource, m_Palette.data(), m_Palette.size() * sizeof(Sony_Pixel_16bpp));
 	}
 	else
 	{
@@ -817,22 +789,6 @@ bool Sony_PlayStation_Texture::WritePalette(StdFile& File, std::uintmax_t pSourc
 	}
 
 	return true;
-}
-
-bool Sony_PlayStation_Texture::WritePalette(std::filesystem::path Path, std::uintmax_t pSource, std::uint16_t iPalette, bool b_WriteAll, bool b_Truncate)
-{
-	StdFile m_File;
-
-	if (b_Truncate)
-	{
-		m_File.Open(Path, FileAccessMode::Write_Ex, true, true);
-	}
-	else
-	{
-		m_File.Open(Path, FileAccessMode::Read_Ex, true, false);
-	}
-
-	return WritePalette(m_File, pSource, iPalette, b_WriteAll);
 }
 
 bool Sony_PlayStation_Texture::WritePixels(StdFile& File, std::uintmax_t pSource)
@@ -858,22 +814,6 @@ bool Sony_PlayStation_Texture::WritePixels(StdFile& File, std::uintmax_t pSource
 	File.Write(pSource, m_Pixels.data(), m_Pixels.size());
 
 	return true;
-}
-
-bool Sony_PlayStation_Texture::WritePixels(std::filesystem::path Path, std::uintmax_t pSource, bool b_Truncate)
-{
-	StdFile m_File;
-
-	if (b_Truncate)
-	{
-		m_File.Open(Path, FileAccessMode::Write_Ex, true, true);
-	}
-	else
-	{
-		m_File.Open(Path, FileAccessMode::Read_Ex, true, false);
-	}
-
-	return WritePixels(m_File, pSource);
 }
 
 bool Sony_PlayStation_Texture::ReadPaletteTIM(std::unique_ptr<Sony_PlayStation_Texture>& External, bool b_Add)
@@ -924,13 +864,6 @@ bool Sony_PlayStation_Texture::ReadPaletteTIM(StdFile& File, std::uintmax_t pSou
 	}
 
 	return ReadPaletteTIM(External, b_Add);
-}
-
-bool Sony_PlayStation_Texture::ReadPaletteTIM(std::filesystem::path Path, std::uintmax_t pSource, bool b_Add)
-{
-	StdFile m_File;
-	m_File.SetPath(Path);
-	return ReadPaletteTIM(m_File, pSource, b_Add);
 }
 
 bool Sony_PlayStation_Texture::ReadPixelsTIM(std::unique_ptr<Sony_PlayStation_Texture>& External)
@@ -995,13 +928,6 @@ bool Sony_PlayStation_Texture::ReadPixelsTIM(StdFile& File, std::uintmax_t pSour
 	return ReadPixelsTIM(External);
 }
 
-bool Sony_PlayStation_Texture::ReadPixelsTIM(std::filesystem::path Path, std::uintmax_t pSource)
-{
-	StdFile m_File;
-	m_File.SetPath(Path);
-	return ReadPixelsTIM(m_File, pSource);
-}
-
 bool Sony_PlayStation_Texture::WritePaletteTIM(StdFile& File, std::uintmax_t pSource, std::uint16_t iPalette, bool b_WriteAll)
 {
 	if (!GetPaletteSize())
@@ -1042,7 +968,7 @@ bool Sony_PlayStation_Texture::WritePaletteTIM(StdFile& File, std::uintmax_t pSo
 	}
 	else
 	{
-		std::vector<Sony_Texture_16bpp> ExPalette(GetPaletteColorMax());
+		std::vector<Sony_Pixel_16bpp> ExPalette(GetPaletteColorMax());
 
 		if (!CopyPalette(ExPalette, iPalette))
 		{
@@ -1060,13 +986,6 @@ bool Sony_PlayStation_Texture::WritePaletteTIM(StdFile& File, std::uintmax_t pSo
 	External->UpdatePaletteDataSize();
 
 	return External->SaveTIM(File, pSource, true, false);
-}
-
-bool Sony_PlayStation_Texture::WritePaletteTIM(std::filesystem::path Path, std::uintmax_t pSource, std::uint16_t iPalette, bool b_WriteAll)
-{
-	StdFile m_File;
-	m_File.SetPath(Path);
-	return WritePaletteTIM(m_File, pSource, iPalette, b_WriteAll);
 }
 
 bool Sony_PlayStation_Texture::WritePixelsTIM(StdFile& File, std::uintmax_t pSource)
@@ -1103,13 +1022,6 @@ bool Sony_PlayStation_Texture::WritePixelsTIM(StdFile& File, std::uintmax_t pSou
 	External->UpdatePixelDataSize();
 
 	return External->SaveTIM(File, pSource, false, true);
-}
-
-bool Sony_PlayStation_Texture::WritePixelsTIM(std::filesystem::path Path, std::uintmax_t pSource)
-{
-	StdFile m_File;
-	m_File.SetPath(Path);
-	return WritePixelsTIM(m_File, pSource);
 }
 
 bool Sony_PlayStation_Texture::OpenTIM(std::unique_ptr<Sony_PlayStation_Texture>& External, bool b_ReadPalette, bool b_ReadPixels)
@@ -1276,13 +1188,6 @@ bool Sony_PlayStation_Texture::OpenTIM(StdFile& File, std::uintmax_t pSource, bo
 	return b_Open;
 }
 
-bool Sony_PlayStation_Texture::OpenTIM(std::filesystem::path Path, std::uintmax_t pSource, bool b_ReadPalette, bool b_ReadPixels)
-{
-	StdFile m_File;
-	m_File.SetPath(Path);
-	return OpenTIM(m_File, pSource, b_ReadPalette, b_ReadPixels);
-}
-
 bool Sony_PlayStation_Texture::OpenCLT(StdFile& File, std::uintmax_t pSource, bool b_Add)
 {
 	if (!File.IsOpen())
@@ -1356,7 +1261,7 @@ bool Sony_PlayStation_Texture::OpenCLT(StdFile& File, std::uintmax_t pSource, bo
 			DataSize += 1;
 		}
 
-		uint16_t nColorSource = (uint16_t)(DataSize / sizeof(Sony_Texture_16bpp));
+		uint16_t nColorSource = (uint16_t)(DataSize / sizeof(Sony_Pixel_16bpp));
 
 		if (nColorSource > 256)
 		{
@@ -1389,13 +1294,6 @@ bool Sony_PlayStation_Texture::OpenCLT(StdFile& File, std::uintmax_t pSource, bo
 	b_Open = true;
 
 	return true;
-}
-
-bool Sony_PlayStation_Texture::OpenCLT(std::filesystem::path Path, std::uintmax_t pSource, bool b_Add)
-{
-	StdFile m_File;
-	m_File.SetPath(Path);
-	return OpenCLT(m_File, pSource, b_Add);
 }
 
 bool Sony_PlayStation_Texture::OpenPXL(StdFile& File, std::uintmax_t pSource)
@@ -1486,13 +1384,6 @@ bool Sony_PlayStation_Texture::OpenPXL(StdFile& File, std::uintmax_t pSource)
 	return true;
 }
 
-bool Sony_PlayStation_Texture::OpenPXL(std::filesystem::path Path, std::uintmax_t pSource)
-{
-	StdFile m_File;
-	m_File.SetPath(Path);
-	return OpenPXL(m_File, pSource);
-}
-
 bool Sony_PlayStation_Texture::OpenBS(StdFile& File, std::uintmax_t pSource, std::uint16_t Width, std::uint16_t Height)
 {
 	if (!File.IsOpen())
@@ -1536,7 +1427,7 @@ bool Sony_PlayStation_Texture::OpenBS(StdFile& File, std::uintmax_t pSource, std
 	{
 		for (std::uint16_t x = 0; x < Width; x++, pOut += 4)
 		{
-			Texture->SetPixel(x, y, Sony_Texture_24bpp{ Output[pOut + 0], Output[pOut + 1], Output[pOut + 2] });
+			Texture->SetPixel(x, y, Sony_Pixel_24bpp{ Output[pOut + 0], Output[pOut + 1], Output[pOut + 2] });
 		}
 	}
 
@@ -1548,13 +1439,6 @@ bool Sony_PlayStation_Texture::OpenBS(StdFile& File, std::uintmax_t pSource, std
 	b_Open = true;
 
 	return true;
-}
-
-bool Sony_PlayStation_Texture::OpenBS(std::filesystem::path Path, std::uintmax_t pSource, std::uint16_t Width, std::uint16_t Height)
-{
-	StdFile m_File;
-	m_File.SetPath(Path);
-	return OpenBS(m_File, pSource, Width, Height);
 }
 
 bool Sony_PlayStation_Texture::OpenPAL(StdFile& File, std::uintmax_t pSource, bool b_Add)
@@ -1575,7 +1459,11 @@ bool Sony_PlayStation_Texture::OpenPAL(StdFile& File, std::uintmax_t pSource, bo
 	std::string PAL(reinterpret_cast<char*>(Header.PAL));
 	std::string data(reinterpret_cast<char*>(Header.data));
 
-	if ((RIFF != "RIFF") || (PAL != "PAL ") || (data != "data"))
+	RIFF.resize(4);
+	PAL.resize(4);
+	data.resize(4);
+
+	if (std::strcmp(RIFF.c_str(), "TIM2") != 0 || std::strcmp(PAL.c_str(), "PAL ") != 0 || std::strcmp(PAL.c_str(), "data") != 0)
 	{
 		Str.Message(L"PlayStation Texture Error: invalid Microsoft RIFF palette header at 0x%llX in \"%ws\"", pSource, File.GetPath().filename().wstring().c_str());
 		return false;
@@ -1599,7 +1487,7 @@ bool Sony_PlayStation_Texture::OpenPAL(StdFile& File, std::uintmax_t pSource, bo
 		return false;
 	}
 
-	std::vector<Sony_Texture_16bpp> ExPalette(Header.nColors);
+	std::vector<Sony_Pixel_16bpp> ExPalette(Header.nColors);
 
 	RGBQUAD Color{};
 
@@ -1644,13 +1532,6 @@ bool Sony_PlayStation_Texture::OpenPAL(StdFile& File, std::uintmax_t pSource, bo
 	b_Open = true;
 
 	return true;
-}
-
-bool Sony_PlayStation_Texture::OpenPAL(std::filesystem::path Path, std::uintmax_t pSource, bool b_Add)
-{
-	StdFile m_File;
-	m_File.SetPath(Path);
-	return OpenPAL(m_File, pSource, b_Add);
 }
 
 bool Sony_PlayStation_Texture::SaveTIM(StdFile& File, std::uintmax_t pSource, bool b_WritePalette, bool b_WritePixels)
@@ -1711,22 +1592,6 @@ bool Sony_PlayStation_Texture::SaveTIM(StdFile& File, std::uintmax_t pSource, bo
 	return true;
 }
 
-bool Sony_PlayStation_Texture::SaveTIM(std::filesystem::path Path, std::uintmax_t pSource, bool b_WritePalette, bool b_WritePixels, bool b_Truncate)
-{
-	StdFile m_File;
-
-	if (b_Truncate)
-	{
-		m_File.Open(Path, FileAccessMode::Write_Ex, true, true);
-	}
-	else
-	{
-		m_File.Open(Path, FileAccessMode::Read_Ex, true, false);
-	}
-
-	return SaveTIM(m_File, pSource, b_WritePalette, b_WritePixels);
-}
-
 bool Sony_PlayStation_Texture::SaveCLT(StdFile& File, std::uintmax_t pSource)
 {
 	if (!GetPaletteCount())
@@ -1754,22 +1619,6 @@ bool Sony_PlayStation_Texture::SaveCLT(StdFile& File, std::uintmax_t pSource)
 	return WriteData(File, pSource + sizeof(Sony_Texture_Header), m_PaletteHeader, UCharFromPalette(m_Palette));
 }
 
-bool Sony_PlayStation_Texture::SaveCLT(std::filesystem::path Path, std::uintmax_t pSource, bool b_Truncate)
-{
-	StdFile m_File;
-
-	if (b_Truncate)
-	{
-		m_File.Open(Path, FileAccessMode::Write_Ex, true, true);
-	}
-	else
-	{
-		m_File.Open(Path, FileAccessMode::Read_Ex, true, false);
-	}
-
-	return SaveCLT(m_File, pSource);
-}
-
 bool Sony_PlayStation_Texture::SavePXL(StdFile& File, std::uintmax_t pSource)
 {
 	if (!GetPixelSize())
@@ -1795,22 +1644,6 @@ bool Sony_PlayStation_Texture::SavePXL(StdFile& File, std::uintmax_t pSource)
 	File.Write(pSource, &PixelHeader, sizeof(Sony_Texture_Header));
 
 	return WriteData(File, pSource + sizeof(Sony_Texture_Header), m_PixelHeader, m_Pixels);
-}
-
-bool Sony_PlayStation_Texture::SavePXL(std::filesystem::path Path, std::uintmax_t pSource, bool b_Truncate)
-{
-	StdFile m_File;
-
-	if (b_Truncate)
-	{
-		m_File.Open(Path, FileAccessMode::Write_Ex, true, true);
-	}
-	else
-	{
-		m_File.Open(Path, FileAccessMode::Read_Ex, true, false);
-	}
-
-	return SavePXL(m_File, pSource);
 }
 
 bool Sony_PlayStation_Texture::SavePAL(StdFile& File, std::uintmax_t pSource)
@@ -1849,31 +1682,15 @@ bool Sony_PlayStation_Texture::SavePAL(StdFile& File, std::uintmax_t pSource)
 
 	for (std::size_t i = 0; i < m_Palette.size(); i++)
 	{
-		Color.rgbRed = GetRed(m_Palette[i]);
-		Color.rgbGreen = GetGreen(m_Palette[i]);
-		Color.rgbBlue = GetBlue(m_Palette[i]);
-		m_Palette[i].STP ? Color.rgbReserved = 0x00 : Color.rgbReserved = 0xFF;
+		Color.rgbRed = m_Palette[i].Red();
+		Color.rgbGreen = m_Palette[i].Green();
+		Color.rgbBlue = m_Palette[i].Blue();
+		m_Palette[i].A ? Color.rgbReserved = 0x00 : Color.rgbReserved = 0xFF;
 
 		File.Write(pSource + 0x16 + (i * sizeof(RGBQUAD)), &Color, sizeof(RGBQUAD));
 	}
 
 	return true;
-}
-
-bool Sony_PlayStation_Texture::SavePAL(std::filesystem::path Path, std::uintmax_t pSource, bool b_Truncate)
-{
-	StdFile m_File;
-
-	if (b_Truncate)
-	{
-		m_File.Open(Path, FileAccessMode::Write_Ex, true, true);
-	}
-	else
-	{
-		m_File.Open(Path, FileAccessMode::Read_Ex, true, false);
-	}
-
-	return SavePAL(m_File, pSource);
 }
 
 bool Sony_PlayStation_Texture::Create(Sony_Texture_Create_Ex ExInfo)
@@ -2082,7 +1899,7 @@ bool Sony_PlayStation_Texture::Create(std::uint32_t Depth, std::uint16_t Width, 
 		m_PaletteHeader.Width = GetPaletteColorMax();
 		m_PaletteHeader.Height = std::clamp(nPalette, (uint16_t)0, GetPaletteCountMax());
 
-		std::vector<Sony_Texture_16bpp> ExPalette = GrayScalePalette(Depth);
+		std::vector<Sony_Pixel_16bpp> ExPalette = GrayScalePalette(Depth);
 
 		for (std::uint16_t i = 0; i < nPalette; i++)
 		{
@@ -2233,19 +2050,11 @@ void Sony_PlayStation_Texture::Search(StdFile& File, std::uintmax_t pSource,
 	OnComplete(File.GetPath(), SearchResults);
 }
 
-void Sony_PlayStation_Texture::Search(std::filesystem::path Path, std::uintmax_t pSource,
-	std::function<void(float, bool&)> ProgressCallback, std::function<void(std::filesystem::path, std::vector<std::pair<std::uintmax_t, std::uintmax_t>>&)> OnComplete)
-{
-	StdFile m_File;
-	m_File.SetPath(Path);
-	Search(m_File, pSource, ProgressCallback, OnComplete);
-}
-
 void Sony_PlayStation_Texture::UpdateImagePalette(std::unique_ptr<Standard_Image>& Image, std::uint16_t iPalette)
 {
 	if (!GetCF() || !GetPaletteCount())
 	{
-		std::cout << "PlayStation Texture: Warning, palette data is empty" << std::endl;
+		std::cout << "PlayStation Texture Warning: palette data is empty" << std::endl;
 		return;
 	}
 
@@ -2263,11 +2072,11 @@ void Sony_PlayStation_Texture::UpdateImagePalette(std::unique_ptr<Standard_Image
 
 	iPalette = std::clamp(iPalette, (uint16_t)0, GetPaletteMaxIndex());
 
-	Sony_Texture_16bpp Color{};
+	Sony_Pixel_16bpp Color{};
 
-	Sony_Texture_16bpp Transposed = GetPaletteColor(0, 0);
+	Sony_Pixel_16bpp Transposed = GetPaletteColor(0, 0);
 
-	Sony_Texture_16bpp External = Create16bpp(m_TransparentColor, false);
+	Sony_Pixel_16bpp External = Create16bpp(m_TransparentColor, false);
 
 	for (std::uint16_t i = 0; i < GetPaletteColorMax(); i++)
 	{
@@ -2281,23 +2090,23 @@ void Sony_PlayStation_Texture::UpdateImagePalette(std::unique_ptr<Standard_Image
 
 		if (b_TransparencySuperimposed && (Color == Transposed))
 		{
-			Image->SetPalette(i, { GetBlue(Transposed), GetGreen(Transposed), GetRed(Transposed), (uint8_t)GetTransparency() });
+			Image->SetPalette(i, { Transposed.Blue(), Transposed.Green(), Transposed.Red(), (uint8_t)GetTransparency()});
 			continue;
 		}
 
 		if (b_TransparencyExternal && (Color == External))
 		{
-			Image->SetPalette(i, { GetBlue(External), GetGreen(External), GetRed(External), (uint8_t)GetTransparency() });
+			Image->SetPalette(i, { External.Blue(), External.Green(), External.Red(), (uint8_t)GetTransparency()});
 			continue;
 		}
 
-		if (b_TransparencySTP && Color.STP)
+		if (b_TransparencySTP && Color.A)
 		{
-			Image->SetPalette(i, { GetBlue(Color), GetGreen(Color), GetRed(Color), (uint8_t)GetTransparency() });
+			Image->SetPalette(i, { Color.Blue(), Color.Green(), Color.Red(), (uint8_t)GetTransparency()});
 			continue;
 		}
 
-		Image->SetPalette(i, { GetBlue(Color), GetGreen(Color), GetRed(Color), (uint8_t)(Color.STP ? 0x00 : 0xFF) });
+		Image->SetPalette(i, { Color.Blue(), Color.Green(), Color.Red(), (uint8_t)(Color.A ? 0x00 : 0xFF)});
 	}
 
 }
@@ -2318,7 +2127,7 @@ std::unique_ptr<Standard_Image> Sony_PlayStation_Texture::ExportImage(std::uint1
 
 	if (m_Pixels.empty())
 	{
-		std::cout << "PlayStation Texture: Warning, pixel data is empty" << std::endl;
+		std::cout << "PlayStation Texture Warning: pixel data is empty" << std::endl;
 		return Image;
 	}
 
@@ -2333,13 +2142,13 @@ std::unique_ptr<Standard_Image> Sony_PlayStation_Texture::ExportImage(std::uint1
 
 	std::uint16_t Height = GetHeight();
 
-	Sony_Texture_4bpp Color4{};
+	Sony_Pixel_4bpp Color4{};
 
-	Sony_Texture_8bpp Color8{};
+	Sony_Pixel_8bpp Color8{};
 
-	Sony_Texture_16bpp Color16{};
+	Sony_Pixel_16bpp Color16{};
 
-	Sony_Texture_24bpp Color24{};
+	Sony_Pixel_24bpp Color24{};
 
 	auto GetTransparency = [this]()
 		{
@@ -2353,29 +2162,25 @@ std::unique_ptr<Standard_Image> Sony_PlayStation_Texture::ExportImage(std::uint1
 			return 0x00;
 		};
 
-	auto GetAlpha24 = [this, GetTransparency, iPalette](Sony_Texture_24bpp Color, bool iColor)
+	auto GetAlpha24 = [this, GetTransparency, iPalette](Sony_Pixel_24bpp Color)
 		{
-			uint8_t R = iColor ? Color.R1 : Color.R0;
-			uint8_t G = iColor ? Color.G1 : Color.G0;
-			uint8_t B = iColor ? Color.B1 : Color.B0;
-
-			if (b_TransparencySuperblack && !R && !G && !B)
+			if (b_TransparencySuperblack && !Color.R && !Color.G && !Color.B)
 			{
 				return 0x00;
 			}
 
 			if (b_TransparencySuperimposed && !GetPalette().empty() &&
-				(R == GetRed(GetPaletteColor(0, 0))) &&
-				(G == GetGreen(GetPaletteColor(0, 0))) &&
-				(B == GetGreen(GetPaletteColor(0, 0))))
+				(Color.R == GetPaletteColor(0, 0).Red()) &&
+				(Color.G == GetPaletteColor(0, 0).Green()) &&
+				(Color.B == GetPaletteColor(0, 0).Blue()))
 			{
 				return GetTransparency();
 			}
 
 			if (b_TransparencyExternal &&
-				(R == GetRValue(m_TransparentColor)) &&
-				(G == GetGValue(m_TransparentColor)) &&
-				(B == GetBValue(m_TransparentColor)))
+				(Color.R == GetRValue(m_TransparentColor)) &&
+				(Color.G == GetGValue(m_TransparentColor)) &&
+				(Color.B == GetBValue(m_TransparentColor)))
 			{
 				return GetTransparency();
 			}
@@ -2393,22 +2198,18 @@ std::unique_ptr<Standard_Image> Sony_PlayStation_Texture::ExportImage(std::uint1
 				Color4 = Get4bpp(X, Y);
 				Image->SetPixel(X, Y, Color4.Pix0);
 				Image->SetPixel(++X, Y, Color4.Pix1);
-				Image->SetPixel(++X, Y, Color4.Pix2);
-				Image->SetPixel(++X, Y, Color4.Pix3);
 				break;
 			case 8:
 				Color8 = Get8bpp(X, Y);
-				Image->SetPixel(X, Y, Color8.Pix0);
-				Image->SetPixel(++X, Y, Color8.Pix1);
+				Image->SetPixel(X, Y, Color8.Pixel);
 				break;
 			case 16:
 				Color16 = Get16bpp(X, Y);
-				Image->SetPixel(X, Y, (Color16.STP << 15) | (Color16.R << 10) | (Color16.G << 5) | Color16.B);
+				Image->SetPixel(X, Y, (Color16.A << 15) | (Color16.R << 10) | (Color16.G << 5) | Color16.B);
 				break;
 			case 24:
 				Color24 = Get24bpp(X, Y);
-				Image->SetPixel(X, Y, (GetAlpha24(Color24, 0) << 24) | (Color24.R0 << 16) | (Color24.G0 << 8) | Color24.B0);
-				Image->SetPixel(++X, Y, (GetAlpha24(Color24, 1) << 24) | (Color24.R1 << 16) | (Color24.G1 << 8) | Color24.B1);
+				Image->SetPixel(X, Y, (GetAlpha24(Color24) << 24) | (Color24.R << 16) | (Color24.G << 8) | Color24.B);
 				break;
 			}
 		}
@@ -2439,11 +2240,11 @@ bool Sony_PlayStation_Texture::ImportImage(std::unique_ptr<Standard_Image>& Imag
 
 	std::uint16_t Height = (uint16_t)Image->GetHeight();
 
-	Bitmap_Pixel_16bpp Color16{};
+	Pixel_16bpp Color16{};
 
-	Bitmap_Pixel_24bpp Color24{};
+	Pixel_24bpp Color24{};
 
-	Bitmap_Pixel_32bpp Color32{};
+	Pixel_32bpp Color32{};
 
 	Close();
 
@@ -2463,7 +2264,7 @@ bool Sony_PlayStation_Texture::ImportImage(std::unique_ptr<Standard_Image>& Imag
 			GetPalette()[i].R = (Image->GetPalette()[i].rgbRed >> 3);
 			GetPalette()[i].G = (Image->GetPalette()[i].rgbGreen >> 3);
 			GetPalette()[i].B = (Image->GetPalette()[i].rgbBlue >> 3);
-			GetPalette()[i].STP = Image->GetPalette()[i].rgbReserved ? false : true;
+			GetPalette()[i].A = Image->GetPalette()[i].rgbReserved ? false : true;
 		}
 	}
 
@@ -2474,24 +2275,22 @@ bool Sony_PlayStation_Texture::ImportImage(std::unique_ptr<Standard_Image>& Imag
 			switch (Depth)
 			{
 			case 4:
-				SetPixel(X, Y, Sony_Texture_4bpp{ (uint8_t)Image->GetPixel(X, Y), (uint8_t)Image->GetPixel(X + 1, Y), (uint8_t)Image->GetPixel(X + 2, Y), (uint8_t)Image->GetPixel(X + 3, Y) });
-				X += 3;
+				SetPixel(X, Y, Sony_Pixel_4bpp{ (uint8_t)Image->GetPixel(X, Y), (uint8_t)Image->GetPixel(++X, Y) });
 				break;
 			case 8:
-				SetPixel(X, Y, Sony_Texture_8bpp{ (uint8_t)Image->GetPixel(X, Y), (uint8_t)Image->GetPixel(X + 1, Y) });
-				X++;
+				SetPixel(X, Y, Sony_Pixel_8bpp{ (uint8_t)Image->GetPixel(X, Y) });
 				break;
 			case 16:
 				Color16 = Image->Get16bpp(X, Y);
-				SetPixel(X, Y, Sony_Texture_16bpp{ Color16.R, Color16.G, Color16.B, Color16.A });
+				SetPixel(X, Y, Sony_Pixel_16bpp{ Color16.R, Color16.G, Color16.B, Color16.A });
 				break;
 			case 24:
 				Color24 = Image->Get24bpp(X, Y);
-				SetPixel(X, Y, Sony_Texture_24bpp{ Color24.R, Color24.G, Color24.B, NULL, NULL, NULL });
+				SetPixel(X, Y, Sony_Pixel_24bpp{ Color24.R, Color24.G, Color24.B });
 				break;
 			case 32:
 				Color32 = Image->Get32bpp(X, Y);
-				SetPixel(X, Y, Sony_Texture_24bpp{ Color32.R, Color32.G, Color32.B, NULL, NULL, NULL });
+				SetPixel(X, Y, Sony_Pixel_24bpp{ Color32.R, Color32.G, Color32.B });
 				break;
 			}
 		}
@@ -2499,43 +2298,3 @@ bool Sony_PlayStation_Texture::ImportImage(std::unique_ptr<Standard_Image>& Imag
 
 	return true;
 }
-
-bool Sony_PlayStation_Texture::OpenBMP(std::filesystem::path Path, std::uintmax_t pSource)
-{
-	std::unique_ptr<Standard_Image> Input = std::make_unique<Standard_Image>();
-
-	if (!Input->OpenBMP(Path, pSource))
-	{
-		return false;
-	}
-
-	return ImportImage(Input);
-}
-
-#ifdef LIB_PNG
-bool Sony_PlayStation_Texture::OpenPNG(std::filesystem::path Path, std::uintmax_t pSource)
-{
-	std::unique_ptr<Standard_Image> Input = std::make_unique<Standard_Image>();
-	
-	if (!Input->OpenPNG(Path, pSource))
-	{
-		return false;
-	}
-
-	return ImportImage(Input);
-}
-#endif
-
-#ifdef LIB_JPEG
-bool Sony_PlayStation_Texture::OpenJPG(std::filesystem::path Path, std::uintmax_t pSource)
-{
-	std::unique_ptr<Standard_Image> Input = std::make_unique<Standard_Image>();
-
-	if (!Input->OpenJPEG(Path, pSource))
-	{
-		return false;
-	}
-
-	return ImportImage(Input);
-}
-#endif
