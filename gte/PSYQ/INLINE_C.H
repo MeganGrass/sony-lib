@@ -82,8 +82,8 @@
 
 // mtc2 0, lwc2 1
 #define gte_ldlv0( r0 ) \
-	{	MTC2((*(uint16_t*)((char*)(r0)+4) << 16) | *(uint16_t*)((char*)(r0)));\
-		MTC2(*(uint16_t*)((char*)(r0)+8) << 16); }
+	{	MTC2((*(uint16_t*)((char*)(r0)+4) << 16) | *(uint16_t*)((char*)(r0)), 0);\
+		MTC2(*(uint16_t*)((char*)(r0)+8) << 16, 0); }
 
 // mtc2 8
 #define gte_lddp( r0 )	\

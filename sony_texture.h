@@ -8,8 +8,6 @@
 
 #pragma once
 
-#include <std_basic_fstream.h>
-
 #include <std_image.h>
 
 #include <functional>
@@ -99,13 +97,34 @@ struct Sony_Texture_Create_Ex
 	std::uint16_t Width;			// 1024 max
 	std::uint16_t Height;			// 512 max
 	std::uint16_t nPalette;			// number of raw palettes to create/read
+	std::uint16_t PaletteWidth;		// multiple of 16 when 4bpp, multiple of 256 otherwise
+	std::uint16_t PaletteX;			// VRAM x position of palette data
+	std::uint16_t PaletteY;			// VRAM y position of palette data
+	std::uint16_t PixelX;			// VRAM x position of pixel data
+	std::uint16_t PixelY;			// VRAM y position of pixel data
 	ImageType PaletteType;			// palette file type
 	ImageType PixelType;			// pixel file type
 	std::uintmax_t pPalette;		// absolute pointer to palette data/file
 	std::uintmax_t pPixel;			// absolute pointer to pixel data/file
 	std::filesystem::path Palette;	// palette file
 	std::filesystem::path Pixel;	// pixel file
-	explicit Sony_Texture_Create_Ex(void) : Depth(16), Width(0), Height(0), nPalette(0), PaletteType(ImageType::null), PixelType(ImageType::null), pPalette(0), pPixel(0), Palette(), Pixel() {}
+	explicit Sony_Texture_Create_Ex(void) :
+		Depth(16),
+		Width(0),
+		Height(0),
+		nPalette(0),
+		PaletteWidth(0),
+		PaletteX(0),
+		PaletteY(0),
+		PixelX(0),
+		PixelY(0),
+		PaletteType(ImageType::null),
+		PixelType(ImageType::null),
+		pPalette(0),
+		pPixel(0),
+		Palette(),
+		Pixel()
+	{}
 };
 
 
@@ -426,7 +445,7 @@ public:
 	/*
 		Set palette data VRAM X coordinate
 	*/
-	void SetPaletteX(std::uint16_t X) { m_PaletteHeader.X = std::clamp(X, (std::uint16_t)0, (std::uint16_t)(1024 - GetPaletteWidth())); }
+	void SetPaletteX(std::uint16_t X) { m_PaletteHeader.X = std::clamp(X, (std::uint16_t)0, (std::uint16_t)1024); }
 
 	/*
 		Get palette data VRAM Y coordinate
@@ -436,7 +455,7 @@ public:
 	/*
 		Set palette data VRAM Y coordinate
 	*/
-	void SetPaletteY(std::uint16_t Y) { m_PaletteHeader.Y = std::clamp(Y, (std::uint16_t)0, (std::uint16_t)(512 - GetPaletteHeight())); }
+	void SetPaletteY(std::uint16_t Y) { m_PaletteHeader.Y = std::clamp(Y, (std::uint16_t)0, (std::uint16_t)512); }
 
 	/*
 		Get palette width
@@ -1189,7 +1208,9 @@ public:
 	{
 		std::unique_ptr<Standard_Image> Input = std::make_unique<Standard_Image>();
 
+#ifdef _WINDOWS
 		Input->Str.hWnd = Str.hWnd;
+#endif
 
 		if (!Input->OpenBMP(Path, pSource))
 		{
@@ -1212,7 +1233,9 @@ public:
 	{
 		std::unique_ptr<Standard_Image> Input = std::make_unique<Standard_Image>();
 
+#ifdef _WINDOWS
 		Input->Str.hWnd = Str.hWnd;
+#endif
 
 		if (!Input->OpenPNG(Path, pSource))
 		{
@@ -1236,7 +1259,9 @@ public:
 	{
 		std::unique_ptr<Standard_Image> Input = std::make_unique<Standard_Image>();
 
+#ifdef _WINDOWS
 		Input->Str.hWnd = Str.hWnd;
+#endif
 
 		if (!Input->OpenJPEG(Path, pSource))
 		{
@@ -1251,7 +1276,9 @@ public:
 	{
 		std::unique_ptr<Sony_PlayStation_Texture_2> TIM2 = std::make_unique<Sony_PlayStation_Texture_2>();
 
+#ifdef _WINDOWS
 		TIM2->Str.hWnd = Str.hWnd;
+#endif
 
 		if (!TIM2->OpenTIM2(Path, pSource, b_ReadPalette, b_ReadPixels))
 		{

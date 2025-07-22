@@ -21,7 +21,7 @@ Sony_Sequence_Type Sony_PlayStation_Sequence::GetType(StdFile& File, std::uintma
 	{
 		if (!File.Open(File.GetPath(), FileAccessMode::Read, true, false))
 		{
-			Str->Message("PlayStation Sequence: Error, could not open at 0x%llX in %s", _Ptr, File.GetPath().filename().string().c_str());
+			Str.Message("PlayStation Sequence: Error, could not open at 0x%llX in %s", _Ptr, File.GetPath().filename().string().c_str());
 			return Sony_Sequence_Type::Unknown;
 		}
 	}
@@ -73,7 +73,7 @@ std::uintmax_t Sony_PlayStation_Sequence::readMIDI(StdFile& File, std::uintmax_t
 	{
 		if (!File.Open(File.GetPath(), FileAccessMode::Read, true, false))
 		{
-			Str->Message("PlayStation Sequence: Error, could not open at 0x%llX in %s", _Ptr, File.GetPath().filename().string().c_str());
+			Str.Message("PlayStation Sequence: Error, could not open at 0x%llX in %s", _Ptr, File.GetPath().filename().string().c_str());
 			return -1;
 		}
 	}
@@ -84,7 +84,7 @@ std::uintmax_t Sony_PlayStation_Sequence::readMIDI(StdFile& File, std::uintmax_t
 
 	if (pEndOfSeq == -1)
 	{
-		Str->Message("PlayStation Sequence: Error, could not find end of sequence");
+		Str.Message("PlayStation Sequence: Error, could not find end of sequence");
 		return -1;
 	}
 
@@ -109,7 +109,7 @@ std::uintmax_t Sony_PlayStation_Sequence::OpenSEQ(StdFile& File, std::uintmax_t 
 	{
 		if (!File.Open(File.GetPath(), FileAccessMode::Read, true, false))
 		{
-			Str->Message("PlayStation Sequence: Error, could not open at 0x%llX in %s", _Ptr, File.GetPath().filename().string().c_str());
+			Str.Message("PlayStation Sequence: Error, could not open at 0x%llX in %s", _Ptr, File.GetPath().filename().string().c_str());
 			return _Ptr;
 		}
 	}
@@ -122,13 +122,13 @@ std::uintmax_t Sony_PlayStation_Sequence::OpenSEQ(StdFile& File, std::uintmax_t 
 
 	if (Magic != "pQES")
 	{
-		Str->Message("PlayStation Sequence: Error, invalid SEQ type at 0x%llX in %s", _Ptr, File.GetPath().filename().string().c_str());
+		Str.Message("PlayStation Sequence: Error, invalid SEQ type at 0x%llX in %s", _Ptr, File.GetPath().filename().string().c_str());
 		return _Ptr;
 	}
 
 	if (SeqHeader.Version != 0x01000000)
 	{
-		Str->Message("PlayStation Sequence: Error, invalid SEQ version at 0x%llX in %s", _Ptr, File.GetPath().filename().string().c_str());
+		Str.Message("PlayStation Sequence: Error, invalid SEQ version at 0x%llX in %s", _Ptr, File.GetPath().filename().string().c_str());
 		return _Ptr;
 	}
 
@@ -173,7 +173,7 @@ std::uintmax_t Sony_PlayStation_Sequence::OpenSEP(StdFile& File, std::uintmax_t 
 	{
 		if (!File.Open(File.GetPath(), FileAccessMode::Read, true, false))
 		{
-			Str->Message("PlayStation Sequence: Error, could not open at 0x%llX in %s", _Ptr, File.GetPath().filename().string().c_str());
+			Str.Message("PlayStation Sequence: Error, could not open at 0x%llX in %s", _Ptr, File.GetPath().filename().string().c_str());
 			return _Ptr;
 		}
 	}
@@ -186,13 +186,13 @@ std::uintmax_t Sony_PlayStation_Sequence::OpenSEP(StdFile& File, std::uintmax_t 
 
 	if (Magic != "pQES")
 	{
-		Str->Message("PlayStation Sequence: Error, invalid SEP type at 0x%llX in %s", _Ptr, File.GetPath().filename().string().c_str());
+		Str.Message("PlayStation Sequence: Error, invalid SEP type at 0x%llX in %s", _Ptr, File.GetPath().filename().string().c_str());
 		return _Ptr;
 	}
 
 	if (SepHeader.Version != 0)
 	{
-		Str->Message("PlayStation Sequence: Error, invalid SEP version at 0x%llX in %s", _Ptr, File.GetPath().filename().string().c_str());
+		Str.Message("PlayStation Sequence: Error, invalid SEP version at 0x%llX in %s", _Ptr, File.GetPath().filename().string().c_str());
 		return _Ptr;
 	}
 
@@ -262,7 +262,7 @@ std::uintmax_t Sony_PlayStation_Sequence::Open(StdFile& File, std::uintmax_t _Pt
 	{
 		if (!File.Open(File.GetPath(), FileAccessMode::Read, true, false))
 		{
-			Str->Message("PlayStation Sequence: Error, could not open at 0x%llX in %s", _Ptr, File.GetPath().filename().string().c_str());
+			Str.Message("PlayStation Sequence: Error, could not open at 0x%llX in %s", _Ptr, File.GetPath().filename().string().c_str());
 			return _Ptr;
 		}
 	}
@@ -271,7 +271,7 @@ std::uintmax_t Sony_PlayStation_Sequence::Open(StdFile& File, std::uintmax_t _Pt
 
 	if (Type == Sony_Sequence_Type::Unknown)
 	{
-		Str->Message("PlayStation Sequence: Error, invalid sequence type at 0x%llX in %s", _Ptr, File.GetPath().filename().string().c_str());
+		Str.Message("PlayStation Sequence: Error, invalid sequence type at 0x%llX in %s", _Ptr, File.GetPath().filename().string().c_str());
 		return _Ptr;
 	}
 	else if (Type == Sony_Sequence_Type::SEQ)
@@ -311,7 +311,7 @@ std::uintmax_t Sony_PlayStation_Sequence::SaveSEQ(StdFile& File, std::size_t Mid
 {
 	if ((Midi_no + 1) > Midi.size())
 	{
-		Str->Message("PlayStation Sequence: Error, invalid MIDI ID");
+		Str.Message("PlayStation Sequence: Error, invalid MIDI ID");
 		return _Ptr;
 	}
 
@@ -319,7 +319,7 @@ std::uintmax_t Sony_PlayStation_Sequence::SaveSEQ(StdFile& File, std::size_t Mid
 	{
 		if (!File.Open(File.GetPath(), FileAccessMode::Write, true, false))
 		{
-			Str->Message("PlayStation Sequence: Error, could not create SEQ at 0x%llX in %s", _Ptr, File.GetPath().filename().string().c_str());
+			Str.Message("PlayStation Sequence: Error, could not create SEQ at 0x%llX in %s", _Ptr, File.GetPath().filename().string().c_str());
 			return _Ptr;
 		}
 	}
@@ -369,7 +369,7 @@ std::uintmax_t Sony_PlayStation_Sequence::SaveSEP(StdFile& File, std::uintmax_t 
 	{
 		if (!File.Open(File.GetPath(), FileAccessMode::Write, true, false))
 		{
-			Str->Message("PlayStation Sequence: Error, could not create SEP at 0x%llX in %s", _Ptr, File.GetPath().filename().string().c_str());
+			Str.Message("PlayStation Sequence: Error, could not create SEP at 0x%llX in %s", _Ptr, File.GetPath().filename().string().c_str());
 			return _Ptr;
 		}
 	}

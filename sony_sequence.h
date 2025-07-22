@@ -11,8 +11,6 @@
 
 #pragma once
 
-#include <std_basic_fstream.h>
-
 #include <std_text.h>
 
 
@@ -74,6 +72,9 @@ private:
 	std::uintmax_t readMIDI(StdFile& File, std::uintmax_t _Ptr);
 
 public:
+
+	// Standard String
+	Standard_String Str;
 
 	/*
 		Construction

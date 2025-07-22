@@ -36,9 +36,9 @@
 struct MATRIX2
 {
     std::int16_t
-        m11, m12, m13,
-        m21, m22, m23,
-        m31, m32, m33;
+        m00, m01, m02,
+        m10, m11, m12,
+        m20, m21, m22;
     std::uint16_t pad;
     std::int32_t
         tx, ty, tz;
@@ -60,6 +60,27 @@ struct SVECTOR2
     std::int16_t z;
 };
 
+
+struct SHAPEVECTOR
+{
+	std::int32_t x;
+	std::int32_t y;
+	std::int32_t z;
+	std::int32_t w;
+	std::int32_t h;
+	std::int32_t d;
+};
+
+
+struct MATVECTOR
+{
+	std::int32_t x;
+	std::int32_t y;
+	std::int32_t z;
+	std::int32_t rx;
+	std::int32_t ry;
+	std::int32_t rz;
+};
 
 struct CVECTOR2
 {
@@ -101,6 +122,24 @@ union PSX_PAIR
 
 #pragma pack(pop)
 
+#define MATRIX_IDENTITY { \
+    ONE, 0,   0, \
+    0,   ONE, 0, \
+    0,   0,   ONE, \
+    0,   0,   0 \
+}
+
+#define MATRIX_SET_IDENTITY(m) \
+        (m)->m[0][0] = ONE; (m)->m[0][1] = 0;  (m)->m[0][2] = 0; \
+        (m)->m[1][0] = 0; (m)->m[1][1] = ONE; (m)->m[1][2] = 0; \
+        (m)->m[2][0] = 0;  (m)->m[2][1] = 0; (m)->m[2][2] = ONE; \
+        (m)->t[0] = 0; (m)->t[1] = 0; (m)->t[2] = 0;
+
+#define MATRIX2_SET_IDENTITY(m) \
+        (m)->m00 = ONE; (m)->m01 = 0; (m)->m02 = 0; \
+        (m)->m10 = 0;  (m)->m11 = ONE; (m)->m12 = 0; \
+        (m)->m20 = 0;  (m)->m21 = 0;  (m)->m22 = ONE; \
+        (m)->tx = 0;   (m)->ty = 0;   (m)->tz = 0;
 
 #define PGXP_LOOKUP_VALUE(x, y) (*(uint16_t*)&(x) | (*(uint16_t*)&(y) << 16))
 
@@ -179,10 +218,6 @@ private:
     static long long m_mac0;
     static long long m_mac3;
 
-    int matrixLevel;
-    std::vector<MATRIX> stack;
-    std::shared_ptr<MATRIX> currentMatrix;
-
     /*
         Precision Geometry Transform Pipeline
     */
@@ -249,6 +284,10 @@ private:
 
 public:
 
+	int matrixLevel;
+	std::vector<MATRIX> stack;
+	std::shared_ptr<MATRIX> currentMatrix;
+
     /*
         Construction
     */
@@ -292,13 +331,40 @@ public:
 	float ToFloat(const short x)
 	{
 		half h = x;
-		return h;
+		return (float)(h) / ONE;
+	}
+
+	/*
+		Half-precision floating-point from unsigned 16-bit integer
+	*/
+	float ToFloat(const unsigned short x)
+	{
+		return (float)(x) / ONE;
+	}
+
+	/*
+		Floating-point from signed 32-bit integer
+	*/
+	float ToFloat(const int x)
+	{
+		return (float)(x) / ONE;
+	}
+
+	/*
+		Signed 16-bit integer from half-precision floating-point
+	*/
+	short ToShort(const float x)
+	{
+		half h = x;
+		return (short)h;
 	}
 
 	/*
 		Custom
 	*/
 	void SetIdentity(MATRIX* m);
+	void SetIdentity(MATRIX2* m);
+	void CompM(MATRIX* m0, MATRIX* m1, MATRIX* m2);
 
     /*
         PSYQ SDK

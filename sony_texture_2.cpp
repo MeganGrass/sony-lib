@@ -181,7 +181,7 @@ bool Sony_PlayStation_Texture_2::OpenTIM2(StdFile& File, std::uintmax_t pSource,
 		if (b_ReadPixels)
 		{
 			Texture[i].Pixels.resize(Texture[i].Data.PixelSize);
-			File.Read(Pointer + Texture[i].Data.HeaderSize, Texture[i].Pixels.data(), Texture[i].Pixels.size());
+			File.Read(Pointer + Texture[i].Data.HeaderSize + Texture[i].Data.Attr.PixelPtr, Texture[i].Pixels.data(), Texture[i].Pixels.size());
 		}
 		else
 		{
@@ -200,7 +200,7 @@ bool Sony_PlayStation_Texture_2::OpenTIM2(StdFile& File, std::uintmax_t pSource,
 		if (b_ReadPalette)
 		{
 			Texture[i].Palette.resize(Texture[i].Data.PaletteSize);
-			File.Read(Pointer + Texture[i].Data.HeaderSize + Texture[i].Data.PixelSize, Texture[i].Palette.data(), Texture[i].Palette.size());
+			File.Read(Pointer + Texture[i].Data.HeaderSize + Texture[i].Data.Attr.PixelPtr + Texture[i].Data.PixelSize + Texture[i].Data.Attr.PalettePtr, Texture[i].Palette.data(), Texture[i].Palette.size());
 		}
 		else
 		{
@@ -368,7 +368,9 @@ std::unique_ptr<Standard_Image> Sony_PlayStation_Texture_2::ExportImage(std::uin
 
 	std::unique_ptr<Standard_Image> Image = std::make_unique<Standard_Image>();
 
+#ifdef _WINDOWS
 	Image->Str.hWnd = Str.hWnd;
+#endif
 
 	Image->Create(Depth, Width, Height);
 

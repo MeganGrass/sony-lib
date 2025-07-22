@@ -856,7 +856,9 @@ bool Sony_PlayStation_Texture::ReadPaletteTIM(StdFile& File, std::uintmax_t pSou
 {
 	std::unique_ptr<Sony_PlayStation_Texture> External = std::make_unique<Sony_PlayStation_Texture>();
 
+#ifdef _WINDOWS
 	External->Str.hWnd = Str.hWnd;
+#endif
 
 	if (!External->OpenTIM(File, pSource, true, false))
 	{
@@ -918,7 +920,9 @@ bool Sony_PlayStation_Texture::ReadPixelsTIM(StdFile& File, std::uintmax_t pSour
 {
 	std::unique_ptr<Sony_PlayStation_Texture> External = std::make_unique<Sony_PlayStation_Texture>();
 
+#ifdef _WINDOWS
 	External->Str.hWnd = Str.hWnd;
+#endif
 
 	if (!External->OpenTIM(File, pSource, false, true))
 	{
@@ -950,7 +954,9 @@ bool Sony_PlayStation_Texture::WritePaletteTIM(StdFile& File, std::uintmax_t pSo
 
 	std::unique_ptr<Sony_PlayStation_Texture> External = std::make_unique<Sony_PlayStation_Texture>();
 
+#ifdef _WINDOWS
 	External->Str.hWnd = Str.hWnd;
+#endif
 
 	if (!External->Create(GetDepth(), 0, 0, 0))
 	{
@@ -1010,7 +1016,9 @@ bool Sony_PlayStation_Texture::WritePixelsTIM(StdFile& File, std::uintmax_t pSou
 
 	std::unique_ptr<Sony_PlayStation_Texture> External = std::make_unique<Sony_PlayStation_Texture>();
 
+#ifdef _WINDOWS
 	External->Str.hWnd = Str.hWnd;
+#endif
 
 	External->Create(GetDepth(), GetWidth(), GetHeight(), NULL);
 
@@ -1469,9 +1477,9 @@ bool Sony_PlayStation_Texture::OpenPAL(StdFile& File, std::uintmax_t pSource, bo
 		return false;
 	}
 
-	if (Header.FileSize != (Header.DataSize + 0x0A))
+	if (Header.Size != (Header.DataSize + 0x0A))
 	{
-		Str.Message(L"PlayStation Texture Error: invalid Microsoft RIFF palette file size (0x%08X) at 0x%llX in \"%ws\"", Header.FileSize, pSource, File.GetPath().filename().wstring().c_str());
+		Str.Message(L"PlayStation Texture Error: invalid Microsoft RIFF palette file size (0x%08X) at 0x%llX in \"%ws\"", Header.Size, pSource, File.GetPath().filename().wstring().c_str());
 		return false;
 	}
 
@@ -1489,13 +1497,13 @@ bool Sony_PlayStation_Texture::OpenPAL(StdFile& File, std::uintmax_t pSource, bo
 
 	std::vector<Sony_Pixel_16bpp> ExPalette(Header.nColors);
 
-	RGBQUAD Color{};
+	Pixel_32bpp Color{};
 
 	for (std::size_t i = 0; i < Header.nColors; i++)
 	{
-		File.Read(pSource + 0x16 + (i * sizeof(RGBQUAD)), &Color, sizeof(RGBQUAD));
+		File.Read(pSource + 0x16 + (i * sizeof(Pixel_32bpp)), &Color, sizeof(Pixel_32bpp));
 
-		ExPalette[i] = Create16bpp(Color.rgbRed, Color.rgbGreen, Color.rgbBlue, Color.rgbReserved);
+		ExPalette[i] = Create16bpp(Color.R, Color.G, Color.B, Color.A);
 	}
 
 	if (b_Add)
@@ -1669,7 +1677,7 @@ bool Sony_PlayStation_Texture::SavePAL(StdFile& File, std::uintmax_t pSource)
 	Microsoft_RIFF_Palette Header{};
 
 	std::memcpy(Header.RIFF, "RIFF", 4);
-	Header.FileSize = (uint16_t)(m_Palette.size() * 4 + 4) + 0x0A;
+	Header.Size = (uint16_t)(m_Palette.size() * 4 + 4) + 0x0A;
 	std::memcpy(Header.PAL, "PAL ", 4);
 	std::memcpy(Header.data, "data", 4);
 	Header.DataSize = (uint16_t)(m_Palette.size() * 4 + 4);
@@ -1678,16 +1686,16 @@ bool Sony_PlayStation_Texture::SavePAL(StdFile& File, std::uintmax_t pSource)
 
 	File.Write(pSource, &Header, sizeof(Microsoft_RIFF_Palette));
 
-	RGBQUAD Color{};
+	Pixel_32bpp Color{};
 
 	for (std::size_t i = 0; i < m_Palette.size(); i++)
 	{
-		Color.rgbRed = m_Palette[i].Red();
-		Color.rgbGreen = m_Palette[i].Green();
-		Color.rgbBlue = m_Palette[i].Blue();
-		m_Palette[i].A ? Color.rgbReserved = 0x00 : Color.rgbReserved = 0xFF;
+		Color.R = m_Palette[i].Red();
+		Color.G = m_Palette[i].Green();
+		Color.B = m_Palette[i].Blue();
+		m_Palette[i].A ? Color.A = 0x00 : Color.A = 0xFF;
 
-		File.Write(pSource + 0x16 + (i * sizeof(RGBQUAD)), &Color, sizeof(RGBQUAD));
+		File.Write(pSource + 0x16 + (i * sizeof(Pixel_32bpp)), &Color, sizeof(Pixel_32bpp));
 	}
 
 	return true;
@@ -1697,7 +1705,9 @@ bool Sony_PlayStation_Texture::Create(Sony_Texture_Create_Ex ExInfo)
 {
 	std::unique_ptr<Sony_PlayStation_Texture> External = std::make_unique<Sony_PlayStation_Texture>();
 
+#ifdef _WINDOWS
 	External->Str.hWnd = Str.hWnd;
+#endif
 
 	if (!External->Create(ExInfo.Depth, NULL, NULL, NULL))
 	{
@@ -1741,7 +1751,9 @@ bool Sony_PlayStation_Texture::Create(Sony_Texture_Create_Ex ExInfo)
 	{
 		std::unique_ptr<Standard_Image> Image = std::make_unique<Standard_Image>();
 
+#ifdef _WINDOWS
 		Image->Str.hWnd = Str.hWnd;
+#endif
 
 		if (std::to_underlying(ExInfo.PixelType) & BMP)
 		{
@@ -2115,7 +2127,9 @@ std::unique_ptr<Standard_Image> Sony_PlayStation_Texture::ExportImage(std::uint1
 {
 	std::unique_ptr<Standard_Image> Image = std::make_unique<Standard_Image>();
 
+#ifdef _WINDOWS
 	Image->Str.hWnd = Str.hWnd;
+#endif
 
 	Image->Create(GetDepth(), GetWidth(), GetHeight());
 
@@ -2220,7 +2234,9 @@ std::unique_ptr<Standard_Image> Sony_PlayStation_Texture::ExportImage(std::uint1
 
 bool Sony_PlayStation_Texture::ImportImage(std::unique_ptr<Standard_Image>& Image)
 {
+#ifdef _WINDOWS
 	Image->Str.hWnd = Str.hWnd;
+#endif
 
 	if (!Image->IsOpen())
 	{
@@ -2255,16 +2271,16 @@ bool Sony_PlayStation_Texture::ImportImage(std::unique_ptr<Standard_Image>& Imag
 
 	if (Depth == 4 || Depth == 8)
 	{
-		for (size_t i = 0; i < Image->GetPalette().size() / sizeof(RGBQUAD); i++)
+		for (size_t i = 0; i < Image->GetPalette().size() / sizeof(Pixel_32bpp); i++)
 		{
 			if (i >= GetPaletteColorMax())
 			{
 				break;
 			}
-			GetPalette()[i].R = (Image->GetPalette()[i].rgbRed >> 3);
-			GetPalette()[i].G = (Image->GetPalette()[i].rgbGreen >> 3);
-			GetPalette()[i].B = (Image->GetPalette()[i].rgbBlue >> 3);
-			GetPalette()[i].A = Image->GetPalette()[i].rgbReserved ? false : true;
+			GetPalette()[i].R = (Image->GetPalette()[i].R >> 3);
+			GetPalette()[i].G = (Image->GetPalette()[i].G >> 3);
+			GetPalette()[i].B = (Image->GetPalette()[i].B >> 3);
+			GetPalette()[i].A = Image->GetPalette()[i].A ? false : true;
 		}
 	}
 

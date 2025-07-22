@@ -27,7 +27,7 @@ std::uintmax_t Sony_PlayStation_Soundbank::OpenVH(StdFile& File, std::uintmax_t 
 	{
 		if (!File.Open(File.GetPath(), FileAccessMode::Read, true, false))
 		{
-			Str->Message("PlayStation Soundbank: Error, could not open VH at 0x%llX in %s", _Ptr, File.GetPath().filename().string().c_str());
+			Str.Message("PlayStation Soundbank: Error, could not open VH at 0x%llX in %s", _Ptr, File.GetPath().filename().string().c_str());
 			return _Ptr;
 		}
 	}
@@ -40,7 +40,7 @@ std::uintmax_t Sony_PlayStation_Soundbank::OpenVH(StdFile& File, std::uintmax_t 
 
 	if (Magic != "pBAV")
 	{
-		Str->Message("PlayStation Soundbank: Error, invalid VH at 0x%llX in %s", _Ptr, File.GetPath().filename().string().c_str());
+		Str.Message("PlayStation Soundbank: Error, invalid VH at 0x%llX in %s", _Ptr, File.GetPath().filename().string().c_str());
 		return _Ptr;
 	}
 
@@ -105,7 +105,7 @@ std::uintmax_t Sony_PlayStation_Soundbank::OpenVB(StdFile& File, std::uintmax_t 
 
 	if (!b_VhOpen)
 	{
-		Str->Message("PlayStation Soundbank: Error, header is not open");
+		Str.Message("PlayStation Soundbank: Error, header is not open");
 		return _Ptr;
 	}
 
@@ -113,7 +113,7 @@ std::uintmax_t Sony_PlayStation_Soundbank::OpenVB(StdFile& File, std::uintmax_t 
 	{
 		if (!File.Open(File.GetPath(), FileAccessMode::Read, true, false))
 		{
-			Str->Message("PlayStation Soundbank: Error, could not open VB at 0x%llX in %s", _Ptr, File.GetPath().filename().string().c_str());
+			Str.Message("PlayStation Soundbank: Error, could not open VB at 0x%llX in %s", _Ptr, File.GetPath().filename().string().c_str());
 			return _Ptr;
 		}
 	}
@@ -206,7 +206,7 @@ std::uintmax_t Sony_PlayStation_Soundbank::SaveVH(StdFile& File, std::uintmax_t 
 {
 	if (!b_VhOpen)
 	{
-		Str->Message("PlayStation Soundbank: Error, header is not open");
+		Str.Message("PlayStation Soundbank: Error, header is not open");
 		return _Ptr;
 	}
 
@@ -214,7 +214,7 @@ std::uintmax_t Sony_PlayStation_Soundbank::SaveVH(StdFile& File, std::uintmax_t 
 	{
 		if (!File.Open(File.GetPath(), FileAccessMode::Write, true, false))
 		{
-			Str->Message("PlayStation Soundbank: Error, could not create VH at 0x%llX in %s", _Ptr, File.GetPath().filename().string().c_str());
+			Str.Message("PlayStation Soundbank: Error, could not create VH at 0x%llX in %s", _Ptr, File.GetPath().filename().string().c_str());
 			return _Ptr;
 		}
 	}
@@ -271,7 +271,7 @@ std::uintmax_t Sony_PlayStation_Soundbank::SaveVB(StdFile& File, std::uintmax_t 
 {
 	if (!b_VbOpen)
 	{
-		Str->Message("PlayStation Soundbank: Error, samples are not open");
+		Str.Message("PlayStation Soundbank: Error, samples are not open");
 		return _Ptr;
 	}
 
@@ -279,7 +279,7 @@ std::uintmax_t Sony_PlayStation_Soundbank::SaveVB(StdFile& File, std::uintmax_t 
 	{
 		if (!File.Open(File.GetPath(), FileAccessMode::Write, true, false))
 		{
-			Str->Message("PlayStation Soundbank: Error, could not create VB at 0x%llX in %s", _Ptr, File.GetPath().filename().string().c_str());
+			Str.Message("PlayStation Soundbank: Error, could not create VB at 0x%llX in %s", _Ptr, File.GetPath().filename().string().c_str());
 			return _Ptr;
 		}
 	}

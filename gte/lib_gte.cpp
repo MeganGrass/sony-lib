@@ -1302,6 +1302,40 @@ void Sony_PlayStation_GTE::SetIdentity(MATRIX* m)
 	m->m[2][0] = 0;		m->m[2][1] = 0;		m->m[2][2] = ONE;
 	m->t[0] = 0;		m->t[1] = 0;		m->t[2] = 0;
 }
+void Sony_PlayStation_GTE::SetIdentity(MATRIX2* m)
+{
+	m->m00 = ONE;	m->m01 = 0;		m->m02 = 0;
+	m->m10 = 0;		m->m11 = ONE;	m->m12 = 0;
+	m->m20 = 0;		m->m21 = 0;		m->m22 = ONE;
+	m->tx = 0;		m->ty = 0;		m->tz = 0;
+}
+void Sony_PlayStation_GTE::CompM(MATRIX* m0, MATRIX* m1, MATRIX* m2)
+{
+	MATRIX* pMVar1;
+	MATRIX* r0;
+	MATRIX* r0_00;
+	VECTOR* r0_01;
+
+	gte_SetRotMatrix((MATRIX*)m0);
+	gte_SetTransMatrix((MATRIX*)m0);
+	gte_ldclmv((MATRIX*)m1);
+	gte_rtir();
+	pMVar1 = (MATRIX*)(m1->m[0] + 1);
+	r0 = (MATRIX*)(m2->m[0] + 1);
+	gte_stclmv((MATRIX*)m2);
+	gte_ldclmv(pMVar1);
+	gte_rtir();
+	r0_00 = (MATRIX*)(m1->m[0] + 2);
+	pMVar1 = (MATRIX*)(m2->m[0] + 2);
+	gte_stclmv(r0);
+	gte_ldclmv(r0_00);
+	gte_rtir();
+	r0_01 = (VECTOR*)(m1->t + 2);
+	gte_stclmv(pMVar1);
+	gte_ldlv0(r0_01);
+	gte_rt();
+	gte_stlvnl((VECTOR*)(m2->t + 2));
+}
 
 
 /*

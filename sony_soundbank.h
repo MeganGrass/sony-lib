@@ -15,9 +15,7 @@
 
 #pragma once
 
-#include <std_basic_fstream.h>
-
-#include <std_string.h>
+#include <std_text.h>
 
 
 #pragma pack(push, 1)
@@ -107,6 +105,9 @@ private:
 	bool b_VbOpen;
 
 public:
+
+	// Standard String
+	Standard_String Str;
 
 	/*
 		Construction

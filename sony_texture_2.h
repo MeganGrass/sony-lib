@@ -8,8 +8,6 @@
 
 #pragma once
 
-#include <std_basic_fstream.h>
-
 #include <std_image.h>
 
 
@@ -389,19 +387,19 @@ class Sony_PlayStation_Texture_2 {
 		return *m_Texture[i].get();
 	}
 
-	String PixelModeStr(Sony_Pixel_Mode Input);
+	[[nodiscard]] String PixelModeStr(Sony_Pixel_Mode Input);
 
-	String PaletteAlignStr(Sony_Pixel_Mode PixelMode, uint8_t Input);
+	[[nodiscard]] String PaletteAlignStr(Sony_Pixel_Mode PixelMode, uint8_t Input);
 
-	String PixelFunctionStr(uint8_t Input);
+	[[nodiscard]] String PixelFunctionStr(uint8_t Input);
 
-	String FilterMagStr(uint8_t Input);
+	[[nodiscard]] String FilterMagStr(uint8_t Input);
 
-	String FilterMinStr(uint8_t Input);
+	[[nodiscard]] String FilterMinStr(uint8_t Input);
 
-	String MipTypeStr(uint8_t Input);
+	[[nodiscard]] String MipTypeStr(uint8_t Input);
 
-	String AlphaExpansionStr(uint8_t Input);
+	[[nodiscard]] String AlphaExpansionStr(uint8_t Input);
 
 public:
 
