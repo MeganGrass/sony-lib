@@ -15,6 +15,11 @@
 #include "gte/lib_gte.h"
 
 
+#ifndef ONE
+#define ONE 4096	// GTE regards 4096 as 1.0
+#endif
+
+
 #pragma pack(push, 1)
 
 
@@ -194,6 +199,21 @@ public:
 		b_IgnoreMagic(false)
 	{
 		Open(Path);
+	}
+
+	explicit Sony_PlayStation_Model(std::filesystem::path Path, std::uintmax_t _Ptr) :
+		b_Open(false),
+		b_IgnoreMagic(false)
+	{
+		Open(Path, _Ptr);
+	}
+
+	explicit Sony_PlayStation_Model(HWND hWnd, std::filesystem::path Path, std::uintmax_t _Ptr, bool IgnoreMagic) :
+		b_Open(false),
+		b_IgnoreMagic(IgnoreMagic)
+	{
+		Str.hWnd = hWnd;
+		Open(Path, _Ptr);
 	}
 
 	virtual ~Sony_PlayStation_Model(void) = default;

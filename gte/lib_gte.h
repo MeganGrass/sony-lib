@@ -80,6 +80,9 @@ struct MATVECTOR
 	std::int32_t rx;
 	std::int32_t ry;
 	std::int32_t rz;
+	std::int32_t sx;
+	std::int32_t sy;
+	std::int32_t sz;
 };
 
 struct CVECTOR2
