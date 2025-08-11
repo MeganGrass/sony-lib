@@ -61,6 +61,14 @@ struct SVECTOR2
 };
 
 
+struct SIZEVECTOR
+{
+	std::int32_t w;
+	std::int32_t h;
+	std::int32_t d;
+};
+
+
 struct SHAPEVECTOR
 {
 	std::int32_t x;

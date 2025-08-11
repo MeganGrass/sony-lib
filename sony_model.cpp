@@ -627,11 +627,14 @@ void Sony_PlayStation_Model::Close(void)
 	m_Object.clear();
 }
 
-std::unique_ptr<FIXED_MODEL> Sony_PlayStation_Model::Export(std::uint16_t TextureWidth, std::uint16_t TextureHeight, bool b_POT) const
+std::unique_ptr<FIXED_MODEL> Sony_PlayStation_Model::Export(std::uint16_t TextureWidth, std::uint16_t TextureHeight, bool b_TexelDX9, bool b_POT) const
 {
 	std::unique_ptr<FIXED_MODEL> Model = std::make_unique<FIXED_MODEL>();
 
 	if (!b_Open || !ObjectCount()) { return Model; }
+
+	float TexelOffset = 0.0f;
+	if (b_TexelDX9) { TexelOffset = 0.5f; }
 
 	constexpr std::uint16_t TexturePageWidth = 128;
 
@@ -771,18 +774,18 @@ std::unique_ptr<FIXED_MODEL> Sony_PlayStation_Model::Export(std::uint16_t Textur
 
 					if (b_Quadrilateral)
 					{
-						Model->Obj[i][x].UV[0].Set((float)(UV.U0 + TexturePageX) / TextureWidth, (float)(UV.V0) / TextureHeight);
-						Model->Obj[i][x].UV[1].Set((float)(UV.U1 + TexturePageX) / TextureWidth, (float)(UV.V1) / TextureHeight);
-						Model->Obj[i][x].UV[2].Set((float)(UV.U2 + TexturePageX) / TextureWidth, (float)(UV.V2) / TextureHeight);
-						Model->Obj[i][x].UV[3].Set((float)(UV.U1 + TexturePageX) / TextureWidth, (float)(UV.V1) / TextureHeight);
-						Model->Obj[i][x].UV[4].Set((float)(UV.U3 + TexturePageX) / TextureWidth, (float)(UV.V3) / TextureHeight);
-						Model->Obj[i][x].UV[5].Set((float)(UV.U2 + TexturePageX) / TextureWidth, (float)(UV.V2) / TextureHeight);
+						Model->Obj[i][x].UV[0].Set(((float)(UV.U0 + TexturePageX) + TexelOffset) / TextureWidth, ((float)(UV.V0) + TexelOffset) / TextureHeight);
+						Model->Obj[i][x].UV[1].Set(((float)(UV.U1 + TexturePageX) + TexelOffset) / TextureWidth, ((float)(UV.V1) + TexelOffset) / TextureHeight);
+						Model->Obj[i][x].UV[2].Set(((float)(UV.U2 + TexturePageX) + TexelOffset) / TextureWidth, ((float)(UV.V2) + TexelOffset) / TextureHeight);
+						Model->Obj[i][x].UV[3].Set(((float)(UV.U1 + TexturePageX) + TexelOffset) / TextureWidth, ((float)(UV.V1) + TexelOffset) / TextureHeight);
+						Model->Obj[i][x].UV[4].Set(((float)(UV.U3 + TexturePageX) + TexelOffset) / TextureWidth, ((float)(UV.V3) + TexelOffset) / TextureHeight);
+						Model->Obj[i][x].UV[5].Set(((float)(UV.U2 + TexturePageX) + TexelOffset) / TextureWidth, ((float)(UV.V2) + TexelOffset) / TextureHeight);
 					}
 					else
 					{
-						Model->Obj[i][x].UV[0].Set((float)(UV.U0 + TexturePageX) / TextureWidth, (float)(UV.V0) / TextureHeight);
-						Model->Obj[i][x].UV[1].Set((float)(UV.U1 + TexturePageX) / TextureWidth, (float)(UV.V1) / TextureHeight);
-						Model->Obj[i][x].UV[2].Set((float)(UV.U2 + TexturePageX) / TextureWidth, (float)(UV.V2) / TextureHeight);
+						Model->Obj[i][x].UV[0].Set(((float)(UV.U0 + TexturePageX) + TexelOffset) / TextureWidth, ((float)(UV.V0) + TexelOffset) / TextureHeight);
+						Model->Obj[i][x].UV[1].Set(((float)(UV.U1 + TexturePageX) + TexelOffset) / TextureWidth, ((float)(UV.V1) + TexelOffset) / TextureHeight);
+						Model->Obj[i][x].UV[2].Set(((float)(UV.U2 + TexturePageX) + TexelOffset) / TextureWidth, ((float)(UV.V2) + TexelOffset) / TextureHeight);
 					}
 				}
 

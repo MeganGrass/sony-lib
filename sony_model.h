@@ -466,8 +466,9 @@ public:
 		Export model to fixed-typed
 		 - convert all vector, normal and UV data to standardized float
 		 - provide texture width and height to convert UV coordinates
+		 - if b_TexelDX9 is true, UV coordinates will be adjust for half-texel correction
 		 - if b_POT is true, texture width and height will be converted to power of two
 	*/
-	[[nodiscard]] std::unique_ptr<FIXED_MODEL> Export(std::uint16_t TextureWidth = 0, std::uint16_t TextureHeight = 0, bool b_POT = true) const;
+	[[nodiscard]] std::unique_ptr<FIXED_MODEL> Export(std::uint16_t TextureWidth = 0, std::uint16_t TextureHeight = 0, bool b_TexelDX9 = false, bool b_POT = true) const;
 
 };
