@@ -774,12 +774,12 @@ std::unique_ptr<FIXED_MODEL> Sony_PlayStation_Model::Export(std::uint16_t Textur
 
 					if (b_Quadrilateral)
 					{
-						Model->Obj[i][x].UV[0].Set(((float)(UV.U0 + TexturePageX) + TexelOffset) / TextureWidth, ((float)(UV.V0) + TexelOffset) / TextureHeight);
-						Model->Obj[i][x].UV[1].Set(((float)(UV.U1 + TexturePageX) + TexelOffset) / TextureWidth, ((float)(UV.V1) + TexelOffset) / TextureHeight);
-						Model->Obj[i][x].UV[2].Set(((float)(UV.U2 + TexturePageX) + TexelOffset) / TextureWidth, ((float)(UV.V2) + TexelOffset) / TextureHeight);
-						Model->Obj[i][x].UV[3].Set(((float)(UV.U1 + TexturePageX) + TexelOffset) / TextureWidth, ((float)(UV.V1) + TexelOffset) / TextureHeight);
-						Model->Obj[i][x].UV[4].Set(((float)(UV.U3 + TexturePageX) + TexelOffset) / TextureWidth, ((float)(UV.V3) + TexelOffset) / TextureHeight);
-						Model->Obj[i][x].UV[5].Set(((float)(UV.U2 + TexturePageX) + TexelOffset) / TextureWidth, ((float)(UV.V2) + TexelOffset) / TextureHeight);
+						Model->Obj[i][x].UV[0].Set(((float)(UV.U0 + TexturePageX) + (TexelOffset / TextureWidth)) / TextureWidth, ((float)(UV.V0) + (TexelOffset / TextureHeight)) / TextureHeight);
+						Model->Obj[i][x].UV[1].Set(((float)(UV.U1 + TexturePageX) + (TexelOffset / TextureWidth)) / TextureWidth, ((float)(UV.V1) + (TexelOffset / TextureHeight)) / TextureHeight);
+						Model->Obj[i][x].UV[2].Set(((float)(UV.U2 + TexturePageX) + (TexelOffset / TextureWidth)) / TextureWidth, ((float)(UV.V2) + (TexelOffset / TextureHeight)) / TextureHeight);
+						Model->Obj[i][x].UV[3].Set(((float)(UV.U1 + TexturePageX) + (TexelOffset / TextureWidth)) / TextureWidth, ((float)(UV.V1) + (TexelOffset / TextureHeight)) / TextureHeight);
+						Model->Obj[i][x].UV[4].Set(((float)(UV.U3 + TexturePageX) + (TexelOffset / TextureWidth)) / TextureWidth, ((float)(UV.V3) + (TexelOffset / TextureHeight)) / TextureHeight);
+						Model->Obj[i][x].UV[5].Set(((float)(UV.U2 + TexturePageX) + (TexelOffset / TextureWidth)) / TextureWidth, ((float)(UV.V2) + (TexelOffset / TextureHeight)) / TextureHeight);
 					}
 					else
 					{
