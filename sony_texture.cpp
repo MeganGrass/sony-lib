@@ -43,7 +43,9 @@ void Sony_PlayStation_Texture::Close(void)
 	std::memset(&m_PaletteHeader, 0, sizeof(Sony_Texture_Data));
 	std::memset(&m_PixelHeader, 0, sizeof(Sony_Texture_Data));
 	m_Palette.clear();
+	m_Palette.shrink_to_fit();
 	m_Pixels.clear();
+	m_Pixels.shrink_to_fit();
 	m_TransparentColor = 0;
 	m_Transparency = Sony_Texture_Transparency::None;
 }
@@ -327,6 +329,7 @@ std::vector<Sony_Pixel_16bpp> Sony_PlayStation_Texture::ConvertPalette(std::vect
 bool Sony_PlayStation_Texture::CopyPalette(std::vector<Sony_Pixel_16bpp>& Out, std::uint16_t iPalette) const
 {
 	Out.clear();
+	Out.shrink_to_fit();
 
 	if (!GetPaletteCount())
 	{
@@ -462,6 +465,7 @@ bool Sony_PlayStation_Texture::DeletePalette(std::uint16_t iPalette, bool b_All)
 	if (b_All)
 	{
 		m_Palette.clear();
+		m_Palette.shrink_to_fit();
 	}
 	else
 	{
@@ -539,6 +543,7 @@ bool Sony_PlayStation_Texture::ReadData(StdFile& File, std::uintmax_t pSource, S
 	std::memset(&OutHeader, 0, sizeof(Sony_Texture_Data));
 
 	OutData.clear();
+	OutData.shrink_to_fit();
 
 	if (!File.IsOpen())
 	{
@@ -1791,6 +1796,7 @@ bool Sony_PlayStation_Texture::Create(Sony_Texture_Create_Ex ExInfo)
 	}
 
 	External->GetPalette().clear();
+	External->GetPalette().shrink_to_fit();
 
 	switch (std::to_underlying(ExInfo.PaletteType) & (TIM | CLT | PAL | RAW))
 	{

@@ -361,8 +361,11 @@ void Sony_PlayStation_Soundbank::CloseVH(void)
 	b_VhOpen = false;
 	std::memset(&Header, 0, sizeof(Sony_Soundbank_Header));
 	Program.clear();
+	Program.shrink_to_fit();
 	Tone.clear();
+	Tone.shrink_to_fit();
 	pSample.clear();
+	pSample.shrink_to_fit();
 }
 
 
@@ -373,6 +376,7 @@ void Sony_PlayStation_Soundbank::CloseVB(void)
 {
 	b_VbOpen = false;
 	Sample.clear();
+	Sample.shrink_to_fit();
 }
 
 

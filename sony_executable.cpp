@@ -271,7 +271,7 @@ std::size_t Sony_PlayStation_Executable::Commandline(StrVec Args)
                     std::uintmax_t Offset = std::strtoull(Args[i + 1].c_str(), nullptr, 16);
                     if (i + 2 < Args.size())
                     {
-                        if (!_Buffer.empty()) { _Buffer.clear(); }
+                        if (!_Buffer.empty()) { _Buffer.clear(); _Buffer.shrink_to_fit(); }
                         std::uintmax_t Size = std::strtoull(Args[i + 2].c_str(), nullptr, 16);
                         std::cout << "Sony PlayStation Executable: Reading " << std::hex << Size << " bytes from " << Offset << std::dec << std::endl;
                         std::uintmax_t pNext = Exe.Read(Offset, _Buffer, Size);
@@ -574,6 +574,7 @@ void Sony_PlayStation_Executable::Close(void)
     b_Open = false;
 	std::memset(&m_Header, 0, sizeof(Sony_PlayStation_Executable_Header));
 	m_RAM.clear();
+	m_RAM.shrink_to_fit();
 }
 
 
@@ -677,7 +678,7 @@ bool Sony_PlayStation_Executable::ExportRAM(std::vector<std::uint8_t>& RAM)
 {
 	if (!b_Open) { return false; }
 
-	if (!RAM.empty()) { RAM.clear(); }
+	if (!RAM.empty()) { RAM.clear(); RAM.shrink_to_fit(); }
 
     RAM.resize(m_RAM.size());
 
@@ -702,7 +703,7 @@ bool Sony_PlayStation_Executable::ExportEXE(std::vector<std::uint8_t>& EXE)
 {
 	if (!b_Open) { return false; }
 
-	if (!EXE.empty()) { EXE.clear(); }
+	if (!EXE.empty()) { EXE.clear(); EXE.shrink_to_fit(); }
 
 	//std::uintmax_t Size = ((m_RAMSize - (static_cast<uintmax_t>(m_Header.t_addr) ^ GetMemoryRegion())) + 0x800);
 

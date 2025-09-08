@@ -195,7 +195,7 @@ public:
 	template<typename T, typename Traits = std::allocator_traits<T>>
 	std::uintmax_t Read(std::uintmax_t _Offset, std::vector<T, Traits>& _Data, std::size_t _ElementSize)
 	{
-		if (!_Data.empty()) { _Data.clear(); }
+		if (!_Data.empty()) { _Data.clear(); _Data.shrink_to_fit(); }
 		_Data.insert(_Data.end(), m_RAM.data() + (_Offset ^ GetMemoryRegion()), m_RAM.data() + (_Offset ^ GetMemoryRegion()) + _ElementSize);
 		return (_Offset + _ElementSize);
 	}

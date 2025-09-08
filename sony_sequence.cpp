@@ -429,5 +429,7 @@ bool Sony_PlayStation_Sequence::SaveSEP(std::filesystem::path Path, std::uintmax
 void Sony_PlayStation_Sequence::Close(void)
 {
 	Header.clear();
+	Header.shrink_to_fit();
 	Midi.clear();
+	Midi.shrink_to_fit();
 }

@@ -333,7 +333,9 @@ public:
         std::memset(&CP2C, 0, sizeof(CP2C));
         currentMatrix.reset();
         stack.clear();
+		stack.shrink_to_fit();
 		g_pgxpCache.clear();
+		g_pgxpCache.shrink_to_fit();
     }
 
 	/*

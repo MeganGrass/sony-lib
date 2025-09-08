@@ -616,15 +616,20 @@ void Sony_PlayStation_Model::Close(void)
 	for (std::size_t i = 0; i < m_Object.size(); i++)
 	{
 		m_Object[i].Vertice.clear();
+		m_Object[i].Vertice.shrink_to_fit();
 		m_Object[i].Normal.clear();
+		m_Object[i].Normal.shrink_to_fit();
 		for (std::size_t x = 0; x < m_Object[i].Primitive.size(); x++)
 		{
 			std::memset(&m_Object[i].Primitive[x].Header, 0, sizeof(Sony_PlayStation_Model_Primitive::Header));
 			m_Object[i].Primitive[x].Packet.clear();
+			m_Object[i].Primitive[x].Packet.shrink_to_fit();
 		}
 		m_Object[i].Primitive.clear();
+		m_Object[i].Primitive.shrink_to_fit();
 	}
 	m_Object.clear();
+	m_Object.shrink_to_fit();
 }
 
 std::unique_ptr<FIXED_MODEL> Sony_PlayStation_Model::Export(std::uint16_t TextureWidth, std::uint16_t TextureHeight, bool b_TexelDX9, bool b_POT) const
