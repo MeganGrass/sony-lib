@@ -564,18 +564,23 @@ bool Sony_PlayStation_Texture::ReadData(StdFile& File, std::uintmax_t pSource, S
 	File.Read(pSource, &ExData, sizeof(Sony_Texture_Data));
 
 	std::size_t DataSize = ExData.Size;
-	if ((DataSize & sizeof(Sony_Texture_Data)) == sizeof(Sony_Texture_Data)) { DataSize ^= sizeof(Sony_Texture_Data); }
 
-	if ((!ExData.Size) ||
-		(ExData.Size > (uint32_t)File.Size()) ||
-		((ExData.Size + pSource) > File.Size()) ||
-		(DataSize != ((size_t)(ExData.Width * ExData.Height) * 2)))
+	if ((DataSize & sizeof(Sony_Texture_Data)) == sizeof(Sony_Texture_Data)) { DataSize -= sizeof(Sony_Texture_Data); }
+
+	if (!DataSize || DataSize > (uint32_t)File.Size() || (DataSize + pSource) > File.Size())
 	{
-		Str.Message(L"PlayStation Texture Error: invalid data size (0x%llX)", ExData.Size);
+		Str.Message(L"PlayStation Texture Error: invalid data size (0x%llX)", DataSize);
 		return false;
 	}
 
-	ExData.Size = ((size_t)(ExData.Width * ExData.Height) * 2) + sizeof(Sony_Texture_Data);
+	if (DataSize != ((size_t)(ExData.Width * ExData.Height) * 2))
+	{
+		std::cout << "PlayStation Texture Warning: invalid data size (0x" << std::hex << ExData.Size << ")" << " at 0x" << std::hex << pSource << std::dec << std::endl;
+	}
+
+	DataSize = ((size_t)(ExData.Width * ExData.Height) * 2);
+
+	ExData.Size = static_cast<std::uint32_t>(DataSize + sizeof(Sony_Texture_Data));
 
 	std::memcpy(&OutHeader, &ExData, sizeof(Sony_Texture_Data));
 
@@ -1267,7 +1272,7 @@ bool Sony_PlayStation_Texture::OpenCLT(StdFile& File, std::uintmax_t pSource, bo
 	if (b_Add)
 	{
 		uint32_t DataSize = DataHeader.Size;
-		if ((DataSize & sizeof(Sony_Texture_Data)) == sizeof(Sony_Texture_Data)) { DataSize ^= sizeof(Sony_Texture_Data); }
+		if ((DataSize & sizeof(Sony_Texture_Data)) == sizeof(Sony_Texture_Data)) { DataSize -= sizeof(Sony_Texture_Data); }
 
 		if (DataSize % 2)
 		{
@@ -1994,6 +1999,8 @@ void Sony_PlayStation_Texture::Search(StdFile& File, std::uintmax_t pSource,
 
 		pRead = pSource;
 
+		File.Get().clear();
+
 		File.Read(pRead, &Header, sizeof(Sony_Texture_Header));
 
 		if (Header.ID != 0x10) { pSource++; continue; }
@@ -2005,49 +2012,54 @@ void Sony_PlayStation_Texture::Search(StdFile& File, std::uintmax_t pSource,
 
 		if (Header.PixelMode == 4) { pSource++; continue; }
 
+		if (Header.ClutFlag && (Header.PixelMode != 0) && (Header.PixelMode != 1)) { pSource++; continue; }
+
 		pRead += sizeof(Sony_Texture_Header);
 
 		if (Header.ClutFlag)
 		{
+			File.Get().clear();
+
 			File.Read(pRead, &DataHeader, sizeof(Sony_Texture_Data));
 
-			DataSize = DataHeader.Size;
-			if ((DataSize & sizeof(Sony_Texture_Data)) == sizeof(Sony_Texture_Data)) { DataSize ^= sizeof(Sony_Texture_Data); }
-
-			if ((!DataHeader.Size) ||
-				(DataHeader.Size > (uint32_t)File.Size()) ||
-				((DataHeader.Size + pRead) > File.Size()) ||
-				(DataSize != (size_t)(DataHeader.Width * DataHeader.Height) * 2))
+			if (!DataHeader.Width || !DataHeader.Height)
 			{
 				pSource++;
 				continue;
 			}
 
-			pRead += ((size_t)(DataHeader.Width * DataHeader.Height) * 2) + sizeof(Sony_Texture_Data);
+			pRead += (size_t)((DataHeader.Width * DataHeader.Height) * 2) + sizeof(Sony_Texture_Data);
 		}
 
 		{
+			File.Get().clear();
+
 			File.Read(pRead, &DataHeader, sizeof(Sony_Texture_Data));
 
-			DataSize = DataHeader.Size;
-			if ((DataSize & sizeof(Sony_Texture_Data)) == sizeof(Sony_Texture_Data)) { DataSize ^= sizeof(Sony_Texture_Data); }
-
-			if ((!DataHeader.Size) ||
-				(DataHeader.Size > (uint32_t)File.Size()) ||
-				((DataHeader.Size + pRead) > File.Size()) ||
-				(DataSize != (size_t)(DataHeader.Width * DataHeader.Height) * 2))
+			if (!DataHeader.Size || !DataHeader.Width || !DataHeader.Height)
 			{
 				pSource++;
 				continue;
 			}
 
-			pRead += ((size_t)(DataHeader.Width * DataHeader.Height) * 2) + sizeof(Sony_Texture_Data);
-		}
+			DataSize = ((size_t)(DataHeader.Width * DataHeader.Height) * 2);
 
-		if (!Header.ClutFlag && !DataSize)
-		{
-			pSource++;
-			continue;
+			if (!DataSize || DataSize > (uint32_t)File.Size() || (DataSize + pRead) > File.Size())
+			{
+				pSource++;
+				continue;
+			}
+
+			if ((DataHeader.Size & sizeof(Sony_Texture_Data)) == sizeof(Sony_Texture_Data)) { DataHeader.Size -= sizeof(Sony_Texture_Data); }
+
+			if (DataHeader.Size != (uint32_t)(DataHeader.Width * DataHeader.Height) * 2)
+			{
+				std::cout << "PlayStation Texture Warning: unexpected pixel data size (0x" << std::hex << DataHeader.Size << ") at 0x" << std::hex << pRead << std::dec << std::endl;
+			}
+
+			DataHeader.Size = (uint32_t)(DataSize + sizeof(Sony_Texture_Data));
+
+			pRead += DataHeader.Size;
 		}
 
 		SearchResults.push_back(std::make_pair(pSource, (pRead - pSource)));

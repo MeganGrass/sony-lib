@@ -21,7 +21,8 @@
 /*
  * Geometry Structures:
  */
-#define	ONE		4096	/* GTE regards 4096 as 1.0 */
+#define	ONE			4096	/* GTE regards 4096 as 1.0 */
+#define	ONE_F		static_cast<float>(ONE)	/* GTE regards 4096 as 1.0 */
 #define TMPVTXNUM	16	/* Clip Function Header */
 #define OUTVTXNUM	10
 
